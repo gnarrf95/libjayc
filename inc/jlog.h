@@ -43,14 +43,14 @@ typedef void (*jlog_message_handler_m_t)(void *ctx, uint8_t log_type, const char
  *
  * @param ctx : Session context to free.
  */
-typedef void (*jlog_free_handler_t)(void *ctx);
+typedef void (*jlog_session_free_handler_t)(void *ctx);
 
 /*******************************************************************************
  * @brief jlog session object, holds data for log calls.
  *
  * @data log_function : Holds function pointer to log handler.
  * @data log_function_m : Holds function pointer to log data with additional information (filename, function name, line number).
- * @data free_handler : Function to free session context memory. Called by jlog_session_free() .
+ * @data session_free_handler : Function to free session context memory. Called by jlog_session_free() .
  * @data log_level : Only log messages with log type >= log level.
  * @data session_context : Context pointer for session data used by certain loggers.
  */
@@ -58,7 +58,7 @@ typedef struct __jlog_session
 {
   jlog_message_handler_t log_function;
   jlog_message_handler_m_t log_function_m;
-  jlog_free_handler_t free_handler;
+  jlog_session_free_handler_t session_free_handler;
   uint8_t log_level;
   void *session_context;
 } jlog_t;

@@ -19,6 +19,41 @@ typedef struct __jlog_stdio_color_context
   char *error_color;
 } jlog_stdio_color_context_t;
 
+/*******************************************************************************
+ * @brief Destroys jlog_stdio_color_context object.
+ * 
+ * @param ctx : Object to destroy.
+ */
+static void jlog_stdio_color_context_free(void *ctx);
+
+/*******************************************************************************
+ * @brief Destroys context for jlog_stdio_color session.
+ * 
+ * @param ctx: Session context to destroy.
+ */
+static void jlog_stdio_color_session_free_handler(void *ctx);
+
+/*******************************************************************************
+ * @brief Handler to log message.
+ *
+ * @param ctx : Session context (not used in this logger).
+ * @param log_type : Log type of message (debug, info, warning, error).
+ * @param fmt : Format string used for stdarg.h .
+ */
+static void jlog_stdio_message_handler(void *ctx, uint8_t log_type, const char *fmt, ...);
+
+/*******************************************************************************
+ * @brief Handler to log message. Contains additional information (filename, function name, line number).
+ *
+ * @param ctx : Session context (not used in this logger).
+ * @param log_type : Log type of message (debug, info, warning, error).
+ * @param file : File name in which log was called.
+ * @param function : Function name in which log was called.
+ * @param line : Line number on which log was called.
+ * @param fmt : Format string used for stdarg.h .
+ */
+static void jlog_stdio_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...);
+
 static void jlog_stdio_print(uint8_t log_type, const char *fmt, ...);
 static void jlog_stdio_print_m(uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...);
 
@@ -110,13 +145,13 @@ void jlog_stdio_color_context_free(void *ctx)
 
 //------------------------------------------------------------------------------
 //
-jlog_t *jlog_stdio_init(uint8_t log_level)
+jlog_t *jlog_stdio_session_init(uint8_t log_level)
 {
   jlog_t *session = (jlog_t *)malloc(sizeof(jlog_t));
 
   session->log_function = &jlog_stdio_message_handler;
   session->log_function_m = &jlog_stdio_message_handler_m;
-  session->free_handler = NULL;
+  session->session_free_handler = NULL;
   session->log_level = log_level;
   session->session_context = NULL;
 
@@ -125,13 +160,13 @@ jlog_t *jlog_stdio_init(uint8_t log_level)
 
 //------------------------------------------------------------------------------
 //
-jlog_t *jlog_stdio_color_init(uint8_t log_level, void *ctx)
+jlog_t *jlog_stdio_color_session_init(uint8_t log_level, void *ctx)
 {
   jlog_t *session = (jlog_t *)malloc(sizeof(jlog_t));
 
   session->log_function = &jlog_stdio_message_handler;
   session->log_function_m = &jlog_stdio_message_handler_m;
-  session->free_handler = &jlog_stdio_color_free_handler;
+  session->session_free_handler = &jlog_stdio_color_session_free_handler;
   session->log_level = log_level;
   session->session_context = ctx;
 
@@ -140,7 +175,7 @@ jlog_t *jlog_stdio_color_init(uint8_t log_level, void *ctx)
 
 //------------------------------------------------------------------------------
 //
-void jlog_stdio_color_free_handler(void *ctx)
+void jlog_stdio_color_session_free_handler(void *ctx)
 {
   jlog_stdio_color_context_free(ctx);
 }

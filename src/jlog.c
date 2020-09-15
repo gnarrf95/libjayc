@@ -15,9 +15,9 @@ void jlog_session_free(struct __jlog_session *session)
     return;
   }
 
-  if(session->free_handler)
+  if(session->session_free_handler)
   {
-    session->free_handler(session->session_context);
+    session->session_free_handler(session->session_context);
   }
 
   free(session);

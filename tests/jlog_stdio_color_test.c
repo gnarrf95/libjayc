@@ -46,14 +46,14 @@ void test_object(uint8_t loglevel)
   void *color_context = NULL;
 
   color_context = jlog_stdio_color_context_init("\033[0;32m", NULL, "\033[01;33m", "\033[1;31m");
-  session = jlog_stdio_color_init(loglevel, color_context);
+  session = jlog_stdio_color_session_init(loglevel, color_context);
   jlog_session_free(session);
 
   color_context = jlog_stdio_color_context_init("\033[0;32m", NULL, "\033[01;33m", "\033[1;31m");
-  session = jlog_stdio_color_init(loglevel, color_context);
-  if(session->free_handler)
+  session = jlog_stdio_color_session_init(loglevel, color_context);
+  if(session->session_free_handler)
   {
-    session->free_handler(session->session_context);
+    session->session_free_handler(session->session_context);
   }
   free(session);
 }
@@ -63,7 +63,7 @@ void test_object(uint8_t loglevel)
 void test_messageHandler(uint8_t loglevel)
 {
   void *color_context = jlog_stdio_color_context_init("\033[0;32m", NULL, "\033[01;33m", "\033[1;31m");
-  jlog_t *session = jlog_stdio_color_init(loglevel, color_context);
+  jlog_t *session = jlog_stdio_color_session_init(loglevel, color_context);
 
   session->log_function(session->session_context, JLOG_LOGTYPE_DEBUG, "Debug log from log_handler() with loglevel [%u].", loglevel);
   session->log_function(session->session_context, JLOG_LOGTYPE_INFO, "Info log from log_handler() with loglevel [%u].", loglevel);
@@ -83,7 +83,7 @@ void test_messageHandler(uint8_t loglevel)
 void test_messageHandler_m(uint8_t loglevel)
 {
   void *color_context = jlog_stdio_color_context_init("\033[0;32m", NULL, "\033[01;33m", "\033[1;31m");
-  jlog_t *session = jlog_stdio_color_init(loglevel, color_context);
+  jlog_t *session = jlog_stdio_color_session_init(loglevel, color_context);
 
   session->log_function_m(session->session_context, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, "Debug log from log_handler_m() with loglevel [%u].", loglevel);
   session->log_function_m(session->session_context, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, "Info log from log_handler_m() with loglevel [%u].", loglevel);
@@ -103,7 +103,7 @@ void test_messageHandler_m(uint8_t loglevel)
 void test_global_object(uint8_t loglevel)
 {
   void *color_context = jlog_stdio_color_context_init("\033[0;32m", NULL, "\033[01;33m", "\033[1;31m");
-  jlog_global_session_set(jlog_stdio_color_init(loglevel, color_context));
+  jlog_global_session_set(jlog_stdio_color_session_init(loglevel, color_context));
   jlog_global_session_free();
 }
 
@@ -112,7 +112,7 @@ void test_global_object(uint8_t loglevel)
 void test_global_messageHandler(uint8_t loglevel)
 {
   void *color_context = jlog_stdio_color_context_init("\033[0;32m", NULL, "\033[01;33m", "\033[1;31m");
-  jlog_global_session_set(jlog_stdio_color_init(loglevel, color_context));
+  jlog_global_session_set(jlog_stdio_color_session_init(loglevel, color_context));
 
   jlog_global_log_message(JLOG_LOGTYPE_DEBUG, "Debug log from jlog_global_log_message() with loglevel [%u].", loglevel);
   jlog_global_log_message(JLOG_LOGTYPE_INFO, "Info log from jlog_global_log_message() with loglevel [%u].", loglevel);
@@ -127,7 +127,7 @@ void test_global_messageHandler(uint8_t loglevel)
 void test_global_messageHandler_m(uint8_t loglevel)
 {
   void *color_context = jlog_stdio_color_context_init("\033[0;32m", NULL, "\033[01;33m", "\033[1;31m");
-  jlog_global_session_set(jlog_stdio_color_init(loglevel, color_context));
+  jlog_global_session_set(jlog_stdio_color_session_init(loglevel, color_context));
 
   jlog_global_log_message_m(JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, "Debug log from jlog_global_log_message_m() with loglevel [%u].", loglevel);
   jlog_global_log_message_m(JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, "Info log from jlog_global_log_message_m() with loglevel [%u].", loglevel);
@@ -142,7 +142,7 @@ void test_global_messageHandler_m(uint8_t loglevel)
 void test_macro_messages(uint8_t loglevel)
 {
   void *color_context = jlog_stdio_color_context_init("\033[0;32m", NULL, "\033[01;33m", "\033[1;31m");
-  jlog_global_session_set(jlog_stdio_color_init(loglevel, color_context));
+  jlog_global_session_set(jlog_stdio_color_session_init(loglevel, color_context));
 
   JLOG_DEBUG("Debug log from JLOG_DEBUG() with loglevel [%u].", loglevel);
   JLOG_INFO("Info log from JLOG_INFO() with loglevel [%u].", loglevel);

@@ -18,6 +18,9 @@ TARGET_TESTS_CPP = $(subst tests, build/tests, $(SRC_TESTS_CPP:.cpp=))
 
 TARGET_LIBJAYC = build/lib/libjayc.so
 
+compile_test: $(OBJ_C) $(OBJ_CPP)
+	@echo "Source Code compiled successfully."
+
 all_tests: $(TARGET_TESTS_C) $(TARGET_TESTS_CPP)
 	@echo "All tests done."
 
@@ -46,4 +49,5 @@ build:
 	mkdir -p build/bin
 
 clean:
-	rm -rf $(TARGET_TESTS_C) $(TARGET_TESTS_CPP) $(TARGET_LIBJAYC) $(OBJ_C) $(OBJ_CPP) 
+	rm -rf $(TARGET_TESTS_C) $(TARGET_TESTS_CPP) $(TARGET_LIBJAYC) $(OBJ_C) $(OBJ_CPP)
+	clear

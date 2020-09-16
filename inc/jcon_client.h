@@ -47,12 +47,15 @@ typedef int(*jcon_client_newData_function_t)(void *ctx);
  *
  * @param ctx : Context pointer for session data.
  * @param data_ptr : Pointer, in which data is stored.
- *                   If NULL, nothing will happen.
+ *                   If NULL, bytes will still be read (number given by data_size),
+ *                   but nothing will be returned.
+ * @param data_size : Size (in bytes) of data to read.
  * 
- * @return : Size of data recieved. If 0, no data was recieved.
+ * @return : Size of data recieved. If not equal to data_size,
+ *           something went wrong in the transmittion. If 0, no data was recieved.
  *           Will return 0 in case of error.
  */
-typedef size_t(*jcon_client_recvData_function_t)(void *ctx, void *data_ptr);
+typedef size_t(*jcon_client_recvData_function_t)(void *ctx, void *data_ptr, size_t data_size);
 
 /*******************************************************************************
  * @brief Function to handle calls for data sending.
@@ -62,7 +65,7 @@ typedef size_t(*jcon_client_recvData_function_t)(void *ctx, void *data_ptr);
  *                   If NULL, nothing will happen.
  * @param data_size : Size of data_ptr in bytes.
  * 
- * @return : Size of data sended. If smaller than data_size, something went
+ * @return : Size of data sended. If not equal to data_size, something went
  *           wrong in transmittion.
  *           Will return 0 in case of error.
  */
@@ -135,7 +138,7 @@ void jcon_client_close(jcon_client_t *session);
  * 
  * @return : String representing type of connection.
  */
-const char *jcon_client_getConntectionType(jcon_client_t *session);
+const char *jcon_client_getConnectionType(jcon_client_t *session);
 
 /*******************************************************************************
  * @brief Check if session is connected.
@@ -160,12 +163,15 @@ int jcon_client_newData(jcon_client_t *session);
  *
  * @param session : Session to recieve data from.
  * @param data_ptr : Pointer, in which data is stored.
- *                   If NULL, nothing will happen.
+ *                   If NULL, bytes will still be read (number given by data_size),
+ *                   but nothing will be returned.
+ * @param data_size : Size (in bytes) of data to read.
  * 
- * @return : Size of data recieved. If 0, no data was recieved.
+ * @return : Size of data recieved. If not equal to data_size,
+ *           something went wrong in the transmittion. If 0, no data was recieved.
  *           Will return 0 in case of error.
  */
-size_t jcon_client_recvData(jcon_client_t *session, void *data_ptr);
+size_t jcon_client_recvData(jcon_client_t *session, void *data_ptr, size_t data_size);
 
 /*******************************************************************************
  * @brief Send data through session.
@@ -175,7 +181,7 @@ size_t jcon_client_recvData(jcon_client_t *session, void *data_ptr);
  *                   If NULL, nothing will happen.
  * @param data_size : Size of data_ptr in bytes.
  * 
- * @return : Size of data sended. If smaller than data_size, something went
+ * @return : Size of data sended. If not equal to data_size, something went
  *           wrong in transmittion.
  *           Will return 0 in case of error.
  */

@@ -101,7 +101,7 @@ int jcon_client_newData(jcon_client_t *session)
 
 //------------------------------------------------------------------------------
 //
-size_t jcon_client_recvData(jcon_client_t *session, void *data_ptr)
+size_t jcon_client_recvData(jcon_client_t *session, void *data_ptr, size_t data_size)
 {
   if(session == NULL)
   {
@@ -115,7 +115,7 @@ size_t jcon_client_recvData(jcon_client_t *session, void *data_ptr)
 
   if(session->function_recvData)
   {
-    return session->function_recvData(session->session_context, data_ptr);
+    return session->function_recvData(session->session_context, data_ptr, data_size);
   }
 
   return 0;

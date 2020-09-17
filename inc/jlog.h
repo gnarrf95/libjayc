@@ -40,6 +40,11 @@ extern "C" {
 
 #include <stdint.h>
 
+/**
+ * @brief jlog session object, holds data for log calls.
+ */
+typedef struct __jlog_session jlog_t;
+
 //==============================================================================
 // Define log types.
 //==============================================================================
@@ -49,65 +54,8 @@ extern "C" {
 #define JLOG_LOGTYPE_WARN 2   /**< Marks warning messages. */
 #define JLOG_LOGTYPE_ERROR 3  /**< Marks error messages. */
 
-/* Predefinition for use in handler functions. */
-struct __jlog_session;
-
 //==============================================================================
-// Define handler types.
-//==============================================================================
-
-/**
- * @brief Function to handle log calls.
- *
- * @param ctx       Context pointer for session data used by certain loggers.
- * @param log_type  Type of log message (debug, info, warning, error).
- * @param fmt       Format string used for stdarg.h .
- */
-typedef void(*jlog_message_handler_t)(void *ctx, uint8_t log_type,
-                                      const char *fmt, ...);
-
-/**
- * @brief Function to handle log calls, uses source code information.
- *
- * @param ctx       Context pointer for session data used by certain loggers.
- * @param log_type  Type of log message (debug, info, warning, error).
- * @param file      File name in which log was called.
- * @param function  Function name in which log was called.
- * @param line      Line number on which log was called.
- * @param fmt       Format string used for stdarg.h .
- */
-typedef void(*jlog_message_handler_m_t)(void *ctx, uint8_t log_type,
-                                        const char *file, const char *function,
-                                        uint32_t line, const char *fmt, ...);
-
-/**
- * @brief Handler to destroy session.
- * 
- * A session, that has a session context, needs a free handler, to free the
- * memory space.
- *
- * @param ctx Session context to free.
- */
-typedef void(*jlog_session_free_handler_t)(void *ctx);
-
-//==============================================================================
-// Type definition.
-//==============================================================================
-
-/**
- * @brief jlog session object, holds data for log calls.
- */
-typedef struct __jlog_session
-{
-  jlog_message_handler_t log_function;              /**< Holds function pointer to log handler. */
-  jlog_message_handler_m_t log_function_m;          /**< Holds function pointer to log data with source code info. */
-  jlog_session_free_handler_t session_free_handler; /**< Function to free session context memory. Called by @c jlog_session_free() . */
-  uint8_t log_level;                                /**< Only log messages with log type >= log level. */
-  void *session_context;                            /**< Context pointer for session data used by certain loggers. */
-} jlog_t;
-
-//==============================================================================
-// Function definition.
+// Define functions.
 //==============================================================================
 
 /**
@@ -118,7 +66,7 @@ typedef struct __jlog_session
  *
  * @param session Session object to Destroy.
  */
-void jlog_session_free(struct __jlog_session *session);
+void jlog_session_free(jlog_t *session);
 
 /**
  * @brief Logs message with session.
@@ -129,7 +77,7 @@ void jlog_session_free(struct __jlog_session *session);
  * @param log_type  Log type of message (debug, info, warning, error).
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_log_message(struct __jlog_session *session, uint8_t log_type,
+void jlog_log_message(jlog_t *session, uint8_t log_type,
                       const char *fmt, ...);
 
 /**
@@ -144,7 +92,7 @@ void jlog_log_message(struct __jlog_session *session, uint8_t log_type,
  * @param line      Line number on which log was called.
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_log_message_m(struct __jlog_session *session, uint8_t log_type,
+void jlog_log_message_m(jlog_t *session, uint8_t log_type,
                         const char *file, const char *function, uint32_t line,
                         const char *fmt, ...);
 
@@ -156,7 +104,7 @@ void jlog_log_message_m(struct __jlog_session *session, uint8_t log_type,
  * 
  * @param session Session object to save as global.
  */
-void jlog_global_session_set(struct __jlog_session *session);
+void jlog_global_session_set(jlog_t *session);
 
 /**
  * @brief Free global session object.

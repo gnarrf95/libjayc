@@ -1,4 +1,5 @@
 #include <jcon_client.h>
+#include <jcon_client_dev.h>
 #include <stdlib.h>
 #include <stdbool.h>
 

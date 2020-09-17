@@ -1,4 +1,5 @@
 #include <jcon_client_tcp.h>
+#include <jcon_client_dev.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>

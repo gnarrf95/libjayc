@@ -1,6 +1,10 @@
 #ifndef INCLUDE_JLOG_SYSLOG_H
 #define INCLUDE_JLOG_SYSLOG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <jlog.h>
 
 /*******************************************************************************
@@ -13,5 +17,9 @@
  * @return : jlog session object.
  */
 jlog_t *jlog_syslog_session_init(uint8_t log_level, const char *id, int facility);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

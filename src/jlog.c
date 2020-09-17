@@ -1,4 +1,5 @@
 #include <jlog.h>
+#include <jlog_dev.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>

@@ -1,4 +1,5 @@
 #include <jlog_syslog.h>
+#include <jlog_dev.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -13,9 +14,9 @@ static void jlog_syslog_session_free_handler(void *ctx);
  *
  * @param ctx : Session context (not used in this logger).
  * @param log_type : Log type of message (debug, info, warning, error).
- * @param fmt : Format string used for stdarg.h .
+ * @param msg : Message string to log.
  */
-static void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char *fmt, ...);
+static void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char *msg);
 
 /*******************************************************************************
  * @brief Handler to log message. Contains additional information (filename, function name, line number).
@@ -25,9 +26,9 @@ static void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char 
  * @param file : File name in which log was called.
  * @param function : Function name in which log was called.
  * @param line : Line number on which log was called.
- * @param fmt : Format string used for stdarg.h .
+ * @param msg : Message string to log.
  */
-static void jlog_syslog_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...);
+static void jlog_syslog_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg);
 
 //------------------------------------------------------------------------------
 //
@@ -59,15 +60,8 @@ void jlog_syslog_session_free_handler(void *ctx)
 
 //------------------------------------------------------------------------------
 //
-void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char *fmt, ...)
+void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char *msg)
 {
-  va_list args;
-  char buf[2048] = { 0 };
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
   int type;
   switch(log_type)
   {
@@ -102,20 +96,13 @@ void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char *fmt, .
     }
   }
 
-  syslog(type, "%s", buf);
+  syslog(type, "%s", msg);
 }
 
 //------------------------------------------------------------------------------
 //
-void jlog_syslog_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...)
+void jlog_syslog_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg)
 {
-  va_list args;
-  char buf[2048] = { 0 };
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
   int type;
   switch(log_type)
   {
@@ -150,5 +137,5 @@ void jlog_syslog_message_handler_m(void *ctx, uint8_t log_type, const char *file
     }
   }
 
-  syslog(type, "[ %s:%u %s() ] %s", file, line, function, buf);
+  syslog(type, "[ %s:%u %s() ] %s", file, line, function, msg);
 }

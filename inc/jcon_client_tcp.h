@@ -1,7 +1,12 @@
 #ifndef INCLUDE_JCON_CLIENT_TCP_H
 #define INCLUDE_JCON_CLIENT_TCP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <jcon_client.h>
+#include <jcon_client_dev.h>
 #include <stdint.h>
 
 #include <jlog.h>
@@ -44,4 +49,8 @@ size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_size);
 
 void jcon_client_tcp_log(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...);
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* INCLUDE_JCON_CLIENT_TCP_H */

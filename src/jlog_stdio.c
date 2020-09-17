@@ -1,4 +1,5 @@
 #include <jlog_stdio.h>
+#include <jlog_dev.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -38,9 +39,9 @@ static void jlog_stdio_color_session_free_handler(void *ctx);
  *
  * @param ctx : Session context (not used in this logger).
  * @param log_type : Log type of message (debug, info, warning, error).
- * @param fmt : Format string used for stdarg.h .
+ * @param msg : Message string to log.
  */
-static void jlog_stdio_message_handler(void *ctx, uint8_t log_type, const char *fmt, ...);
+static void jlog_stdio_message_handler(void *ctx, uint8_t log_type, const char *msg);
 
 /*******************************************************************************
  * @brief Handler to log message. Contains additional information (filename, function name, line number).
@@ -50,15 +51,15 @@ static void jlog_stdio_message_handler(void *ctx, uint8_t log_type, const char *
  * @param file : File name in which log was called.
  * @param function : Function name in which log was called.
  * @param line : Line number on which log was called.
- * @param fmt : Format string used for stdarg.h .
+ * @param msg : Message string to log.
  */
-static void jlog_stdio_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...);
+static void jlog_stdio_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg);
 
-static void jlog_stdio_print(uint8_t log_type, const char *fmt, ...);
-static void jlog_stdio_print_m(uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...);
+static void jlog_stdio_print(uint8_t log_type, const char *msg);
+static void jlog_stdio_print_m(uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg);
 
-static void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, uint8_t log_type, const char *fmt, ...);
-static void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...);
+static void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, uint8_t log_type, const char *msg);
+static void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg);
 
 //------------------------------------------------------------------------------
 //
@@ -182,57 +183,36 @@ void jlog_stdio_color_session_free_handler(void *ctx)
 
 //------------------------------------------------------------------------------
 //
-void jlog_stdio_message_handler(void *ctx, uint8_t log_type, const char *fmt, ...)
+void jlog_stdio_message_handler(void *ctx, uint8_t log_type, const char *msg)
 {
-  va_list args;
-  char buf[2048] = { 0 };
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
   if(ctx)
   {
-    jlog_stdio_color_print((jlog_stdio_color_context_t *)ctx, log_type, buf);
+    jlog_stdio_color_print((jlog_stdio_color_context_t *)ctx, log_type, msg);
   }
   else
   {
-    jlog_stdio_print(log_type, buf);
+    jlog_stdio_print(log_type, msg);
   }
 }
 
 //------------------------------------------------------------------------------
 //
-void jlog_stdio_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...)
+void jlog_stdio_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg)
 {
-  va_list args;
-  char buf[2048] = { 0 };
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
   if(ctx)
   {
-    jlog_stdio_color_print_m((jlog_stdio_color_context_t *)ctx, log_type, file, function, line, buf);
+    jlog_stdio_color_print_m((jlog_stdio_color_context_t *)ctx, log_type, file, function, line, msg);
   }
   else
   {
-    jlog_stdio_print_m(log_type, file, function, line, buf);
+    jlog_stdio_print_m(log_type, file, function, line, msg);
   }
 }
 
 //------------------------------------------------------------------------------
 //
-void jlog_stdio_print(uint8_t log_type, const char *fmt, ...)
+void jlog_stdio_print(uint8_t log_type, const char *msg)
 {
-  va_list args;
-  char buf[2048] = { 0 };
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
   char *type;
   FILE *out_stream;
   switch(log_type)
@@ -269,20 +249,13 @@ void jlog_stdio_print(uint8_t log_type, const char *fmt, ...)
     }
   }
 
-  fprintf(out_stream, "[ =%s= ] %s\n", type, buf);
+  fprintf(out_stream, "[ =%s= ] %s\n", type, msg);
 }
 
 //------------------------------------------------------------------------------
 //
-void jlog_stdio_print_m(uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...)
+void jlog_stdio_print_m(uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg)
 {
-  va_list args;
-  char buf[2048] = { 0 };
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
   char *type;
   FILE *out_stream;
   switch(log_type)
@@ -319,20 +292,13 @@ void jlog_stdio_print_m(uint8_t log_type, const char *file, const char *function
     }
   }
 
-  fprintf(out_stream, "[ =%s= %s:%u %s() ] %s\n", type, file, line, function, buf);
+  fprintf(out_stream, "[ =%s= %s:%u %s() ] %s\n", type, file, line, function, msg);
 }
 
 //------------------------------------------------------------------------------
 //
-void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, uint8_t log_type, const char *fmt, ...)
+void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, uint8_t log_type, const char *msg)
 {
-  va_list args;
-  char buf[2048] = { 0 };
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
   char *type;
   char *color = JLOG_STDIO_COLOR_RESET;
   FILE *out_stream;
@@ -390,20 +356,13 @@ void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, uint8_t l
     }
   }
 
-  fprintf(out_stream, "[ =%s%s%s= ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, color, buf, JLOG_STDIO_COLOR_RESET);
+  fprintf(out_stream, "[ =%s%s%s= ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, color, msg, JLOG_STDIO_COLOR_RESET);
 }
 
 //------------------------------------------------------------------------------
 //
-void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...)
+void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg)
 {
-  va_list args;
-  char buf[2048] = { 0 };
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
   char *type;
   char *color = JLOG_STDIO_COLOR_RESET;
   FILE *out_stream;
@@ -461,5 +420,5 @@ void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, uint8_t
     }
   }
 
-  fprintf(out_stream, "[ =%s%s%s= %s:%u %s() ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, file, line, function, color, buf, JLOG_STDIO_COLOR_RESET);
+  fprintf(out_stream, "[ =%s%s%s= %s:%u %s() ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, file, line, function, color, msg, JLOG_STDIO_COLOR_RESET);
 }

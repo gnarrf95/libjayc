@@ -7,7 +7,6 @@ extern "C" {
 
 #include <jcon_client.h>
 #include <jcon_client_dev.h>
-#include <stdint.h>
 
 #include <jlog.h>
 #include <netinet/in.h>
@@ -47,7 +46,7 @@ int jcon_client_tcp_newData(void *ctx);
 size_t jcon_client_tcp_recvData(void *ctx, void *data_ptr, size_t data_size);
 size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_size);
 
-void jcon_client_tcp_log(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...);
+void jcon_client_tcp_log(void *ctx, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
 #ifdef __cplusplus
 }

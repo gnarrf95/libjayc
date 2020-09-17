@@ -14,7 +14,7 @@ extern "C" {
  * @param log_type  Type of log message (debug, info, warning, error).
  * @param msg       Message string to log.
  */
-typedef void(*jlog_message_handler_t)(void *ctx, uint8_t log_type,
+typedef void(*jlog_message_handler_t)(void *ctx, int log_type,
                                       const char *msg);
 
 /**
@@ -27,9 +27,9 @@ typedef void(*jlog_message_handler_t)(void *ctx, uint8_t log_type,
  * @param line      Line number on which log was called.
  * @param msg       Message string to log.
  */
-typedef void(*jlog_message_handler_m_t)(void *ctx, uint8_t log_type,
+typedef void(*jlog_message_handler_m_t)(void *ctx, int log_type,
                                         const char *file, const char *function,
-                                        uint32_t line, const char *msg);
+                                        int line, const char *msg);
 
 /**
  * @brief Handler to destroy session.
@@ -49,7 +49,7 @@ struct __jlog_session
   jlog_message_handler_t log_function;              /**< Holds function pointer to log handler. */
   jlog_message_handler_m_t log_function_m;          /**< Holds function pointer to log data with source code info. */
   jlog_session_free_handler_t session_free_handler; /**< Function to free session context memory. Called by @c jlog_session_free() . */
-  uint8_t log_level;                                /**< Only log messages with log type >= log level. */
+  int log_level;                                    /**< Only log messages with log type >= log level. */
   void *session_context;                            /**< Context pointer for session data used by certain loggers. */
 };
 

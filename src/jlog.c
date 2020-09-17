@@ -26,7 +26,7 @@ void jlog_session_free(struct __jlog_session *session)
 
 //------------------------------------------------------------------------------
 //
-void jlog_log_message(struct __jlog_session *session, uint8_t log_type, const char *fmt, ...)
+void jlog_log_message(struct __jlog_session *session, int log_type, const char *fmt, ...)
 {
   if(session == NULL)
   {
@@ -49,7 +49,7 @@ void jlog_log_message(struct __jlog_session *session, uint8_t log_type, const ch
 
 //------------------------------------------------------------------------------
 //
-void jlog_log_message_m(struct __jlog_session *session, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...)
+void jlog_log_message_m(struct __jlog_session *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
 {
   if(session == NULL)
   {
@@ -89,7 +89,7 @@ void jlog_global_session_free()
 
 //------------------------------------------------------------------------------
 //
-void jlog_global_log_message(uint8_t log_type, const char *fmt, ...)
+void jlog_global_log_message(int log_type, const char *fmt, ...)
 {
   if(global_session == NULL)
   {
@@ -107,7 +107,7 @@ void jlog_global_log_message(uint8_t log_type, const char *fmt, ...)
 
 //------------------------------------------------------------------------------
 //
-void jlog_global_log_message_m(uint8_t log_type, const char *file, const char *function, uint32_t line, const char *fmt, ...)
+void jlog_global_log_message_m(int log_type, const char *file, const char *function, int line, const char *fmt, ...)
 {
   if(global_session == NULL)
   {

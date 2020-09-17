@@ -16,7 +16,7 @@ extern "C" {
  * 
  * @return : jlog session object.
  */
-jlog_t *jlog_syslog_session_init(uint8_t log_level, const char *id, int facility);
+jlog_t *jlog_syslog_session_init(int log_level, const char *id, int facility);
 
 #ifdef __cplusplus
 }

@@ -16,7 +16,7 @@ static void jlog_syslog_session_free_handler(void *ctx);
  * @param log_type : Log type of message (debug, info, warning, error).
  * @param msg : Message string to log.
  */
-static void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char *msg);
+static void jlog_syslog_message_handler(void *ctx, int log_type, const char *msg);
 
 /*******************************************************************************
  * @brief Handler to log message. Contains additional information (filename, function name, line number).
@@ -28,11 +28,11 @@ static void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char 
  * @param line : Line number on which log was called.
  * @param msg : Message string to log.
  */
-static void jlog_syslog_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg);
+static void jlog_syslog_message_handler_m(void *ctx, int log_type, const char *file, const char *function, int line, const char *msg);
 
 //------------------------------------------------------------------------------
 //
-jlog_t *jlog_syslog_session_init(uint8_t log_level, const char *id, int facility)
+jlog_t *jlog_syslog_session_init(int log_level, const char *id, int facility)
 {
   if(singleton_session == NULL)
   {
@@ -60,7 +60,7 @@ void jlog_syslog_session_free_handler(void *ctx)
 
 //------------------------------------------------------------------------------
 //
-void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char *msg)
+void jlog_syslog_message_handler(void *ctx, int log_type, const char *msg)
 {
   int type;
   switch(log_type)
@@ -101,7 +101,7 @@ void jlog_syslog_message_handler(void *ctx, uint8_t log_type, const char *msg)
 
 //------------------------------------------------------------------------------
 //
-void jlog_syslog_message_handler_m(void *ctx, uint8_t log_type, const char *file, const char *function, uint32_t line, const char *msg)
+void jlog_syslog_message_handler_m(void *ctx, int log_type, const char *file, const char *function, int line, const char *msg)
 {
   int type;
   switch(log_type)
@@ -137,5 +137,5 @@ void jlog_syslog_message_handler_m(void *ctx, uint8_t log_type, const char *file
     }
   }
 
-  syslog(type, "[ %s:%u %s() ] %s", file, line, function, msg);
+  syslog(type, "[ %s:%d %s() ] %s", file, line, function, msg);
 }

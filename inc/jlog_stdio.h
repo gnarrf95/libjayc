@@ -50,7 +50,7 @@ void *jlog_stdio_color_context_init(const char *debug_color,
  * @return          Session pointer.
  * @return          @c NULL , if failed.
  */
-jlog_t *jlog_stdio_session_init(uint8_t log_level);
+jlog_t *jlog_stdio_session_init(int log_level);
 
 /**
  * @brief Creates @c #jlog_t session that logs colored outputs using @c fprintf .
@@ -65,7 +65,7 @@ jlog_t *jlog_stdio_session_init(uint8_t log_level);
  * @return          @c NULL , if failed.
  * 
  */
-jlog_t *jlog_stdio_color_session_init(uint8_t log_level, void *ctx);
+jlog_t *jlog_stdio_color_session_init(int log_level, void *ctx);
 
 #ifdef __cpluslpus
 } /* extern "C" */

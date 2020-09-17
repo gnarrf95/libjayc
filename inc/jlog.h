@@ -38,8 +38,6 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-
 /**
  * @brief jlog session object, holds data for log calls.
  */
@@ -77,7 +75,7 @@ void jlog_session_free(jlog_t *session);
  * @param log_type  Log type of message (debug, info, warning, error).
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_log_message(jlog_t *session, uint8_t log_type,
+void jlog_log_message(jlog_t *session, int log_type,
                       const char *fmt, ...);
 
 /**
@@ -92,8 +90,8 @@ void jlog_log_message(jlog_t *session, uint8_t log_type,
  * @param line      Line number on which log was called.
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_log_message_m(jlog_t *session, uint8_t log_type,
-                        const char *file, const char *function, uint32_t line,
+void jlog_log_message_m(jlog_t *session, int log_type,
+                        const char *file, const char *function, int line,
                         const char *fmt, ...);
 
 /**
@@ -123,7 +121,7 @@ void jlog_global_session_free();
  * @param log_type  Log type of message (debug, info, warning, error).
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_global_log_message(uint8_t log_type, const char *fmt, ...);
+void jlog_global_log_message(int log_type, const char *fmt, ...);
 
 /**
  * @brief Log message via global session object including source code info.
@@ -137,8 +135,8 @@ void jlog_global_log_message(uint8_t log_type, const char *fmt, ...);
  * @param line      Line number on which log was called.
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_global_log_message_m(uint8_t log_type, const char *file,
-                               const char *function, uint32_t line,
+void jlog_global_log_message_m(int log_type, const char *file,
+                               const char *function, int line,
                                const char *fmt, ...);
 
 //==============================================================================

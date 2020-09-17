@@ -3,7 +3,14 @@ CXX = g++ -Wall -Werror -std=c++11 -fPIC
 
 INC = -I inc/
 
-LIB = -lpthread -ljansson
+CFLAGS = `mysql_config --cflags`
+CXXFLAGS = `mysql_config --cxxflags`
+
+LIB_JANSSON = -ljansson
+LIB_PTHREAD = -lpthread
+LIB_MYSQL = `mysql_config --libs`
+
+LIB = $(LIB_PTHREAD)
 
 SRC_C = $(wildcard src/*.c)
 SRC_CPP = $(wildcard src/*.cpp)
@@ -40,16 +47,16 @@ $(TARGET_LIBJAYC): $(OBJ_C) $(OBJ_CPP)
 	$(CC) -shared -o $@ $(INC) $? $(LIB)
 
 build/tests/%: tests/%.c $(OBJ_C)
-	$(CC) $? -o $@ $(INC)
+	$(CC) $? -o $@ $(INC) $(LIB)
 
 build/tests/%: tests/%.cpp $(OBJ_C) $(OBJ_CPP)
 	$(CXX) $? -o $@ $(INC)
 
 build/objects/%.o: src/%.c build
-	$(CC) -c $< -o $@ $(INC)
+	$(CC) -c $< -o $@ $(INC) $(CFLAGS)
 
 build/objects/%.o: src/%.cpp build
-	$(CXX) -c $< -o $@ $(INC)
+	$(CXX) -c $< -o $@ $(INC) $(CXXFLAGS)
 
 build:
 	mkdir -p build/objects

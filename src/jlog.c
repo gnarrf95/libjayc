@@ -9,6 +9,25 @@ static struct __jlog_session *global_session;
 
 //------------------------------------------------------------------------------
 //
+jlog_t *jlog_session_quiet()
+{
+  jlog_t *session = (jlog_t *)malloc(sizeof(jlog_t));
+  if(session == NULL)
+  {
+    return NULL;
+  }
+
+  session->log_function = NULL;
+  session->log_function_m = NULL;
+  session->session_free_handler = NULL;
+  session->log_level = 0;
+  session->session_context = NULL;
+
+  return session;
+}
+
+//------------------------------------------------------------------------------
+//
 void jlog_session_free(struct __jlog_session *session)
 {
   if(session == NULL)
@@ -33,6 +52,11 @@ void jlog_log_message(struct __jlog_session *session, int log_type, const char *
     return;
   }
 
+  if(session->log_function == NULL)
+  {
+    return;
+  }
+
   if(log_type < session->log_level)
   {
     return;
@@ -52,6 +76,11 @@ void jlog_log_message(struct __jlog_session *session, int log_type, const char *
 void jlog_log_message_m(struct __jlog_session *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
 {
   if(session == NULL)
+  {
+    return;
+  }
+
+  if(session->log_function_m == NULL)
   {
     return;
   }

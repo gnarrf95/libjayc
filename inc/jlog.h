@@ -1,6 +1,6 @@
 /**
  * @file jlog.h
- * @author Manuel Nadji
+ * @author Manuel Nadji (manuel.nadji@gmail.com)
  * 
  * @brief This is a logger system, that can call customized implementations.
  * 
@@ -55,6 +55,13 @@ typedef struct __jlog_session jlog_t;
 //==============================================================================
 // Define functions.
 //==============================================================================
+
+/**
+ * @brief Creates quiet session, that doesn't log.
+ * 
+ * @return Pointer to quiet jlog session.
+ */
+jlog_t *jlog_session_quiet();
 
 /**
  * @brief Frees session memory.

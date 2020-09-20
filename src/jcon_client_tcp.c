@@ -30,6 +30,7 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
 
   session->function_reset = &jcon_client_tcp_reset;
   session->function_close = &jcon_client_tcp_close;
+  session->function_getReferenceString = &jcon_client_tcp_getReferenceString;
   session->function_isConnected = &jcon_client_tcp_isConnected;
   session->function_newData = &jcon_client_tcp_newData;
   session->function_recvData = &jcon_client_tcp_recvData;

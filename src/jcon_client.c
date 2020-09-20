@@ -68,6 +68,25 @@ const char *jcon_client_getConnectionType(jcon_client_t *session)
 
 //------------------------------------------------------------------------------
 //
+const char *jcon_client_getReferenceString(jcon_client_t *session)
+{
+  if(session == NULL)
+  {
+    return NULL;
+  }
+
+  if(session->function_getReferenceString)
+  {
+    return session->function_getReferenceString(session->session_context);
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+//------------------------------------------------------------------------------
+//
 int jcon_client_isConnected(jcon_client_t *session)
 {
   if(session == NULL)

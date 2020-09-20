@@ -45,6 +45,15 @@ void jcon_client_close(jcon_client_t *session);
 const char *jcon_client_getConnectionType(jcon_client_t *session);
 
 /*******************************************************************************
+ * @brief Get string that shows information about client connection.
+ *
+ * @param session : Session to check.
+ * 
+ * @return : String with client connection info.
+ */
+const char *jcon_client_getReferenceString(jcon_client_t *session);
+
+/*******************************************************************************
  * @brief Check if session is connected.
  *
  * @param session : Session to check.

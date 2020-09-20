@@ -23,6 +23,16 @@ typedef int(*jcon_client_reset_function_t)(void *ctx);
  */
 typedef void(*jcon_client_close_function_t)(void *ctx);
 
+/**
+ * @brief Function to handle request for reference string.
+ * 
+ * @param ctx : Context pointer for session data.
+ * 
+ * @return : String with reference to client connection.
+ * @return : NULL, if failed.
+ */
+typedef const char* (*jcon_client_getReferenceString_function_t)(void *ctx);
+
 /*******************************************************************************
  * @brief Function to handle request for connection state.
  *
@@ -95,7 +105,9 @@ struct __jcon_client_session
 {
   jcon_client_reset_function_t function_reset;
   jcon_client_close_function_t function_close;
+  jcon_client_getReferenceString_function_t function_getReferenceString;
   jcon_client_isConnected_function_t function_isConnected;
+  
 
   jcon_client_newData_function_t function_newData;
   jcon_client_recvData_function_t function_recvData;

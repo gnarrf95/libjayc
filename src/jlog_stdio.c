@@ -7,6 +7,13 @@
 
 #define JLOG_STDIO_COLOR_RESET "\033[0m"
 
+#define JLOG_STDIO_LOGSTRING_DEBUG "=DBG="
+#define JLOG_STDIO_LOGSTRING_INFO "=INF="
+#define JLOG_STDIO_LOGSTRING_WARN "=WRN="
+#define JLOG_STDIO_LOGSTRING_ERROR "=ERR="
+#define JLOG_STDIO_LOGSTRING_CRITICAL "*CRT*"
+#define JLOG_STDIO_LOGSTRING_FATAL "**FATAL**"
+
 /*******************************************************************************
  * @brief Color context for jlog_stdio_color session.
  *        Colors are saved in ANSI color codes.
@@ -219,37 +226,49 @@ void jlog_stdio_print(int log_type, const char *msg)
   {
     case JLOG_LOGTYPE_DEBUG:
     {
-      type = "DBG";
+      type = JLOG_STDIO_LOGSTRING_DEBUG;
       out_stream = stdout;
       break;
     }
     case JLOG_LOGTYPE_INFO:
     {
-      type = "INF";
+      type = JLOG_STDIO_LOGSTRING_INFO;
       out_stream = stdout;
       break;
     }
     case JLOG_LOGTYPE_WARN:
     {
-      type = "WRN";
+      type = JLOG_STDIO_LOGSTRING_WARN;
       out_stream = stdout;
       break;
     }
     case JLOG_LOGTYPE_ERROR:
     {
-      type = "ERR";
+      type = JLOG_STDIO_LOGSTRING_ERROR;
+      out_stream = stderr;
+      break;
+    }
+    case JLOG_LOGTYPE_CRITICAL:
+    {
+      type = JLOG_STDIO_LOGSTRING_CRITICAL;
+      out_stream = stderr;
+      break;
+    }
+    case JLOG_LOGTYPE_FATAL:
+    {
+      type = JLOG_STDIO_LOGSTRING_FATAL;
       out_stream = stderr;
       break;
     }
     default:
     {
-      type = "DBG";
+      type = JLOG_STDIO_LOGSTRING_DEBUG;
       out_stream = stdout;
       break;
     }
   }
 
-  fprintf(out_stream, "[ =%s= ] %s\n", type, msg);
+  fprintf(out_stream, "[ %s ] %s\n", type, msg);
 }
 
 //------------------------------------------------------------------------------
@@ -262,37 +281,49 @@ void jlog_stdio_print_m(int log_type, const char *file, const char *function, in
   {
     case JLOG_LOGTYPE_DEBUG:
     {
-      type = "DBG";
+      type = JLOG_STDIO_LOGSTRING_DEBUG;
       out_stream = stdout;
       break;
     }
     case JLOG_LOGTYPE_INFO:
     {
-      type = "INF";
+      type = JLOG_STDIO_LOGSTRING_INFO;
       out_stream = stdout;
       break;
     }
     case JLOG_LOGTYPE_WARN:
     {
-      type = "WRN";
+      type = JLOG_STDIO_LOGSTRING_WARN;
       out_stream = stdout;
       break;
     }
     case JLOG_LOGTYPE_ERROR:
     {
-      type = "ERR";
+      type = JLOG_STDIO_LOGSTRING_ERROR;
+      out_stream = stderr;
+      break;
+    }
+    case JLOG_LOGTYPE_CRITICAL:
+    {
+      type = JLOG_STDIO_LOGSTRING_CRITICAL;
+      out_stream = stderr;
+      break;
+    }
+    case JLOG_LOGTYPE_FATAL:
+    {
+      type = JLOG_STDIO_LOGSTRING_FATAL;
       out_stream = stderr;
       break;
     }
     default:
     {
-      type = "DBG";
+      type = JLOG_STDIO_LOGSTRING_DEBUG;
       out_stream = stdout;
       break;
     }
   }
 
-  fprintf(out_stream, "[ =%s= %s:%d %s() ] %s\n", type, file, line, function, msg);
+  fprintf(out_stream, "[ %s %s:%d %s() ] %s\n", type, file, line, function, msg);
 }
 
 //------------------------------------------------------------------------------
@@ -306,7 +337,7 @@ void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, int log_t
   {
     case JLOG_LOGTYPE_DEBUG:
     {
-      type = "DBG";
+      type = JLOG_STDIO_LOGSTRING_DEBUG;
       if(color_context->debug_color)
       {
         color = color_context->debug_color;
@@ -316,7 +347,7 @@ void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, int log_t
     }
     case JLOG_LOGTYPE_INFO:
     {
-      type = "INF";
+      type = JLOG_STDIO_LOGSTRING_INFO;
       if(color_context->info_color)
       {
         color = color_context->info_color;
@@ -326,7 +357,7 @@ void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, int log_t
     }
     case JLOG_LOGTYPE_WARN:
     {
-      type = "WRN";
+      type = JLOG_STDIO_LOGSTRING_WARN;
       if(color_context->warn_color)
       {
         color = color_context->warn_color;
@@ -336,7 +367,27 @@ void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, int log_t
     }
     case JLOG_LOGTYPE_ERROR:
     {
-      type = "ERR";
+      type = JLOG_STDIO_LOGSTRING_ERROR;
+      if(color_context->error_color)
+      {
+        color = color_context->error_color;
+      }
+      out_stream = stderr;
+      break;
+    }
+    case JLOG_LOGTYPE_CRITICAL:
+    {
+      type = JLOG_STDIO_LOGSTRING_CRITICAL;
+      if(color_context->error_color)
+      {
+        color = color_context->error_color;
+      }
+      out_stream = stderr;
+      break;
+    }
+    case JLOG_LOGTYPE_FATAL:
+    {
+      type = JLOG_STDIO_LOGSTRING_FATAL;
       if(color_context->error_color)
       {
         color = color_context->error_color;
@@ -346,7 +397,7 @@ void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, int log_t
     }
     default:
     {
-      type = "DBG";
+      type = JLOG_STDIO_LOGSTRING_DEBUG;
       if(color_context->debug_color)
       {
         color = color_context->debug_color;
@@ -356,7 +407,7 @@ void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, int log_t
     }
   }
 
-  fprintf(out_stream, "[ =%s%s%s= ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, color, msg, JLOG_STDIO_COLOR_RESET);
+  fprintf(out_stream, "[ %s%s%s ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, color, msg, JLOG_STDIO_COLOR_RESET);
 }
 
 //------------------------------------------------------------------------------
@@ -370,7 +421,7 @@ void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log
   {
     case JLOG_LOGTYPE_DEBUG:
     {
-      type = "DBG";
+      type = JLOG_STDIO_LOGSTRING_DEBUG;
       if(color_context->debug_color)
       {
         color = color_context->debug_color;
@@ -380,7 +431,7 @@ void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log
     }
     case JLOG_LOGTYPE_INFO:
     {
-      type = "INF";
+      type = JLOG_STDIO_LOGSTRING_INFO;
       if(color_context->info_color)
       {
         color = color_context->info_color;
@@ -390,7 +441,7 @@ void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log
     }
     case JLOG_LOGTYPE_WARN:
     {
-      type = "WRN";
+      type = JLOG_STDIO_LOGSTRING_WARN;
       if(color_context->warn_color)
       {
         color = color_context->warn_color;
@@ -400,7 +451,27 @@ void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log
     }
     case JLOG_LOGTYPE_ERROR:
     {
-      type = "ERR";
+      type = JLOG_STDIO_LOGSTRING_ERROR;
+      if(color_context->error_color)
+      {
+        color = color_context->error_color;
+      }
+      out_stream = stderr;
+      break;
+    }
+    case JLOG_LOGTYPE_CRITICAL:
+    {
+      type = JLOG_STDIO_LOGSTRING_CRITICAL;
+      if(color_context->error_color)
+      {
+        color = color_context->error_color;
+      }
+      out_stream = stderr;
+      break;
+    }
+    case JLOG_LOGTYPE_FATAL:
+    {
+      type = JLOG_STDIO_LOGSTRING_FATAL;
       if(color_context->error_color)
       {
         color = color_context->error_color;
@@ -410,7 +481,7 @@ void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log
     }
     default:
     {
-      type = "DBG";
+      type = JLOG_STDIO_LOGSTRING_DEBUG;
       if(color_context->debug_color)
       {
         color = color_context->debug_color;
@@ -420,5 +491,5 @@ void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log
     }
   }
 
-  fprintf(out_stream, "[ =%s%s%s= %s:%d %s() ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, file, line, function, color, msg, JLOG_STDIO_COLOR_RESET);
+  fprintf(out_stream, "[ %s%s%s %s:%d %s() ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, file, line, function, color, msg, JLOG_STDIO_COLOR_RESET);
 }

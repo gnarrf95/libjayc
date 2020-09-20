@@ -69,6 +69,25 @@ void jlog_log_message(struct __jlog_session *session, int log_type, const char *
   vsnprintf(buf, sizeof(buf), fmt, args);
   session->log_function(session->session_context, log_type, buf);
   va_end(args);
+
+  if(log_type == JLOG_LOGTYPE_FATAL)
+  {
+    exit(EXIT_FAILURE);
+  }
+
+  #ifdef JLOG_EXIT_ATCRITICAL
+  if(log_type == JLOG_LOGTYPE_CRITICAL)
+  {
+    exit(EXIT_FAILURE);
+  }
+  #endif /* JLOG_EXIT_ATCRITICAL */
+
+  #ifdef JLOG_EXIT_ATERROR
+  if(log_type == JLOG_LOGTYPE_ERROR)
+  {
+    exit(EXIT_FAILURE);
+  }
+  #endif /* JLOG_EXIT_ATERROR */
 }
 
 //------------------------------------------------------------------------------
@@ -97,6 +116,25 @@ void jlog_log_message_m(struct __jlog_session *session, int log_type, const char
   vsnprintf(buf, sizeof(buf), fmt, args);
   session->log_function_m(session->session_context, log_type, file, function, line, buf);
   va_end(args);
+
+  if(log_type == JLOG_LOGTYPE_FATAL)
+  {
+    exit(EXIT_FAILURE);
+  }
+
+  #ifdef JLOG_EXIT_ATCRITICAL
+  if(log_type == JLOG_LOGTYPE_CRITICAL)
+  {
+    exit(EXIT_FAILURE);
+  }
+  #endif /* JLOG_EXIT_ATCRITICAL */
+
+  #ifdef JLOG_EXIT_ATERROR
+  if(log_type == JLOG_LOGTYPE_ERROR)
+  {
+    exit(EXIT_FAILURE);
+  }
+  #endif /* JLOG_EXIT_ATERROR */
 }
 
 //------------------------------------------------------------------------------

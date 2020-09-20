@@ -89,6 +89,18 @@ void jlog_syslog_message_handler(void *ctx, int log_type, const char *msg)
       break;
     }
 
+    case JLOG_LOGTYPE_CRITICAL:
+    {
+      type = LOG_CRIT;
+      break;
+    }
+
+    case JLOG_LOGTYPE_FATAL:
+    {
+      type = LOG_EMERG;
+      break;
+    }
+
     default:
     {
       type = LOG_DEBUG;
@@ -127,6 +139,18 @@ void jlog_syslog_message_handler_m(void *ctx, int log_type, const char *file, co
     case JLOG_LOGTYPE_ERROR:
     {
       type = LOG_ERR;
+      break;
+    }
+
+    case JLOG_LOGTYPE_CRITICAL:
+    {
+      type = LOG_CRIT;
+      break;
+    }
+
+    case JLOG_LOGTYPE_FATAL:
+    {
+      type = LOG_EMERG;
       break;
     }
 

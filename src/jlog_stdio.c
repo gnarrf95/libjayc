@@ -1,3 +1,14 @@
+/**
+ * @file jlog_stdio.c
+ * @author Manuel Nadji (https://github.com/gnarrf95)
+ * 
+ * @brief Implements functionality for jlog_stdio.
+ * 
+ * @date 2020-09-21
+ * @copyright Copyright (c) 2020 by Manuel Nadji
+ * 
+ */
+
 #include <jlog_stdio.h>
 #include <jlog_dev.h>
 #include <stdio.h>

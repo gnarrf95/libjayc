@@ -1,3 +1,14 @@
+/**
+ * @file jlog_dev.h
+ * @author Manuel Nadji (https://github.com/gnarrf95)
+ * 
+ * @brief Necessary definitions for implementations of jlog.
+ * 
+ * @date 2020-09-21
+ * @copyright Copyright (c) 2020 by Manuel Nadji
+ * 
+ */
+
 #ifndef INCLUDE_JLOG_DEV_H
 #define INCLUDE_JLOG_DEV_H
 

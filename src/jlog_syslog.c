@@ -1,3 +1,14 @@
+/**
+ * @file jlog_syslog.c
+ * @author Manuel Nadji (https://github.com/gnarrf95)
+ * 
+ * @brief Implements functionality for jlog_syslog.
+ * 
+ * @date 2020-09-21
+ * @copyright Copyright (c) 2020 by Manuel nadji
+ * 
+ */
+
 #include <jlog_syslog.h>
 #include <jlog_dev.h>
 #include <stdio.h>

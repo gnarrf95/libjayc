@@ -74,6 +74,44 @@ make install PREFIX=<your installation path>
 ## Components
 
 ## Using The Library
+For an example to use the library, let's write a simple _Hello World_
+program, using the _jlog\_stdio_ logger. Let's call it `hw.c`.
+
+```c
+#include <jlog_stdio.h>
+#include <stdlib.h>
+
+int main()
+{
+  jlog_t *logger = jlog_stdio_session_init(JLOG_LOGTYPE_DEBUG);
+  if(logger == NULL)
+  {
+    return EXIT_FAILURE;
+  }
+
+  jlog_log_message(logger, JLOG_LOGTYPE_INFO, "Hello World!");
+  jlog_session_free(logger);
+
+  return EXIT_SUCCESS;
+}
+```
+
+Now to compile the program we have to pass the _libjayc_ library to the
+linker:
+```bash
+gcc hw.c -o hw -ljayc
+```
+
+The program should return this output:
+```
+[ =INF= ] Hello World!
+```
+
+If you used a different install directory, than `/usr/local` or `/usr`, then
+you need to pass the include- and library-path to the compiler:
+```bash
+gcc hw.c -o hw -I <path to library>/include/ -L <path to library>/lib/ -ljayc
+```
 
 ## License
 Distributed under [MIT License](LICENSE).

@@ -98,14 +98,50 @@ This session however, does not do anything. It is there to use in components,
 that you don't want to log anything (f.ex. if _jcon\_client\_tcp_ does not
 get a logger session, it defaults to the global logger).
 
+#### Interface
+`_session_init()` functions from implementations will return a `jlog_t`
+pointer. This will be the session object to use in the interface functions.
+
+Since session object are dynamically allocated memory, the session must
+be closed by calling `jlog_session_free()` whith the session object as
+parameter.   
+
+Logs messages are sent by using `jlog_log_message()` and `jlog_log_message_m()`.
+The `_m` suffix states, that the function is including source code
+information in its log messages.   
+The source code information are:
+* Filename (by using `__FILE__`)
+* Function name (by using `__func__`)
+* Line number (by using `__LINE__`)
+
+#### Global Session
+Created sessions can also be used as a _global session_. That means, that
+a logger can be used by calling the functions `jlog_global_log_message()` and
+`jlog_global_log_message_m()`.
+
+For the global session to be usable, it has to be set with
+`jlog_global_session_set()` with a initialized session as parameter.   
+This can then be freed by using `jlog_global_session_free()`.
+
+The global session can also be accessed by macros. There is a macro for
+each log type. These macros also directly pass the source code information
+to the function.   
+They are:
+* `JLOG_DEBUG()`
+* `JLOG_INFO()`
+* `JLOG_WARN()`
+* `JLOG_ERROR()`
+* `JLOG_CRITICAL()`
+* `JLOG_FATAL()`
+
 #### Log Types
 _jlog_ has 6 log types:
-* JLOG_LOGTYPE_DEBUG
-* JLOG_LOGTYPE_INFO
-* JLOG_LOGTYPE_WARN
-* JLOG_LOGTYPE_ERROR
-* JLOG_LOGTYPE_CRITICAL
-* JLOG_LOGTYPE_FATAL
+* `JLOG_LOGTYPE_DEBUG`
+* `JLOG_LOGTYPE_INFO`
+* `JLOG_LOGTYPE_WARN`
+* `JLOG_LOGTYPE_ERROR`
+* `JLOG_LOGTYPE_CRITICAL`
+* `JLOG_LOGTYPE_FATAL`
 
 While _DEBUG_, _INFO_, _WARN_ and _ERROR_ are widely known; _CRITICAL_ and
 _FATAL_ are a bit more special-case.
@@ -118,6 +154,7 @@ that to happen, the macros `JLOG_EXIT_ATERROR` or `JLOG_EXIT_ATCRITICAL`
 have to be defined.
 ```bash
 gcc -D JLOG_EXIT_ATCRITICAL ...
+gcc -D JLOG_EXIT_ATERROR ...
 ```
 
 ### jlog_stdio

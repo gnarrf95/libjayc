@@ -61,7 +61,7 @@ typedef struct __jcon_client_tcp_context jcon_client_tcp_context_t;
  * 
  * @param ctx Context to free.
  */
-void jcon_client_tcp_session_free(void *ctx);
+static void jcon_client_tcp_session_free(void *ctx);
 
 /**
  * @brief Resets socket.
@@ -73,14 +73,14 @@ void jcon_client_tcp_session_free(void *ctx);
  * @return    @c true , if reset was successful.
  * @return    @c false , if reset failed.
  */
-int jcon_client_tcp_reset(void *ctx);
+static int jcon_client_tcp_reset(void *ctx);
 
 /**
  * @brief Closes connection.
  * 
  * @param ctx Context of session to close.
  */
-void jcon_client_tcp_close(void *ctx);
+static void jcon_client_tcp_close(void *ctx);
 
 /**
  * @brief Checks, wether client is connected.
@@ -90,7 +90,7 @@ void jcon_client_tcp_close(void *ctx);
  * @return    @c true , if client is connected.
  * @return    @c false , if client is not connected or error occured.
  */
-int jcon_client_tcp_isConnected(void *ctx);
+static int jcon_client_tcp_isConnected(void *ctx);
 
 /**
  * @brief Creates @c jcon_client_tcp_context_t#reference_string .
@@ -100,7 +100,7 @@ int jcon_client_tcp_isConnected(void *ctx);
  * @return              Allocated string for reference.
  * @return              @c NULL , if error occured.
  */
-char *jcon_client_tcp_createReferenceString(struct sockaddr_in sock_address);
+static char *jcon_client_tcp_createReferenceString(struct sockaddr_in sock_address);
 
 /**
  * @brief Returnes @c jcon_client_tcp_context_t#reference_string .
@@ -110,7 +110,7 @@ char *jcon_client_tcp_createReferenceString(struct sockaddr_in sock_address);
  * @return    Session string.
  * @return    @c NULL , if error occured.
  */
-const char *jcon_client_tcp_getReferenceString(void *ctx);
+static const char *jcon_client_tcp_getReferenceString(void *ctx);
 
 /**
  * @brief Gets IP address from socket address struct.
@@ -120,7 +120,7 @@ const char *jcon_client_tcp_getReferenceString(void *ctx);
  * @return                String with IP address.
  * @return                @c NULL , if error occured.
  */
-char *jcon_client_tcp_getIP(struct sockaddr_in socket_address);
+static char *jcon_client_tcp_getIP(struct sockaddr_in socket_address);
 
 /**
  * @brief Gets Port number from socket address struct.
@@ -130,7 +130,7 @@ char *jcon_client_tcp_getIP(struct sockaddr_in socket_address);
  * @return                Port number.
  * @return                @c 0 , if error occured.
  */
-uint16_t jcon_client_tcp_getPort(struct sockaddr_in socket_address);
+static uint16_t jcon_client_tcp_getPort(struct sockaddr_in socket_address);
 
 /**
  * @brief Checks, if new data is available to read.
@@ -140,7 +140,7 @@ uint16_t jcon_client_tcp_getPort(struct sockaddr_in socket_address);
  * @return    @c true , if new data is available.
  * @return    @c false , if no new data or error occured.
  */
-int jcon_client_tcp_newData(void *ctx);
+static int jcon_client_tcp_newData(void *ctx);
 
 /**
  * @brief Recieves data from socket.
@@ -154,7 +154,7 @@ int jcon_client_tcp_newData(void *ctx);
  * @return          Size of data recieved.
  * @return          @c 0 , if no data recieved, or error occured.
  */
-size_t jcon_client_tcp_recvData(void *ctx, void *data_ptr, size_t data_size);
+static size_t jcon_client_tcp_recvData(void *ctx, void *data_ptr, size_t data_size);
 
 /**
  * @brief Send data through socket.
@@ -167,7 +167,7 @@ size_t jcon_client_tcp_recvData(void *ctx, void *data_ptr, size_t data_size);
  * @return          Size of data sended.
  * @return          @c 0 , if no data written or error occured.
  */
-size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_size);
+static size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_size);
 
 /**
  * @brief Logs debug and error messages.
@@ -181,7 +181,7 @@ size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_size);
  * @param line      Line, where message was logged.
  * @param fmt       Format string for stdarg.h .
  */
-void jcon_client_tcp_log(void *ctx, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
+static void jcon_client_tcp_log(void *ctx, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
 //==============================================================================
 // Define context structure and log macros.

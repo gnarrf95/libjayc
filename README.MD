@@ -14,14 +14,6 @@
                             |___/        
 ```
 
-`libjayc` is a C-only utility library, which implements a lot of useful
-features, to make the creation of projects easier. There are background
-features like Loggers, connectors, server handlers, etc.
-
-Although the project is written in C, it uses a object-oriented paradigm.
-I decided to use this approach, to allow new implementations, while making
-it possible to use these implementations in a unified, abstract interface.
-
 ## Table of Contents
 
 * [About the Project](#about-the-project)
@@ -40,9 +32,15 @@ it possible to use these implementations in a unified, abstract interface.
 * [License](#license)
 
 ## About The Project
+`libjayc` is a C-only utility library, which implements a lot of useful
+features, to make the creation of projects easier. There are background
+features like Loggers, connectors, server handlers, etc.
+
+Although the project is written in C, it uses a object-oriented paradigm.
+I decided to use this approach, to allow new implementations, while making
+it possible to use these implementations in a unified, abstract interface.
 
 ## Getting Started
-
 ### Prerequesites
 _This project does not have any library requirements yet._
 

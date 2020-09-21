@@ -1,3 +1,14 @@
+/**
+ * @file jcon_client_tcp.h
+ * @author Manuel Nadji (https://github.com/gnarrf95)
+ * 
+ * @brief TCP socket connector, implemented using jcon_client.
+ * 
+ * @date 2020-09-21
+ * @copyright Copyright (c) 2020 by Manuel Nadji
+ * 
+ */
+
 #ifndef INCLUDE_JCON_CLIENT_TCP_H
 #define INCLUDE_JCON_CLIENT_TCP_H
 
@@ -6,47 +17,38 @@ extern "C" {
 #endif
 
 #include <jcon_client.h>
-#include <jcon_client_dev.h>
 
 #include <jlog.h>
 #include <netinet/in.h>
 
-#define JCON_CLIENT_TCP_CONNECTIONTYPE "TCP"
-#define JCON_CLIENT_TCP_POLL_TIMEOUT_DEFAULT 10
-#define JCON_CLIENT_TCP_MAX_MESSAGE_SIZE 4096
-
-struct __jcon_client_tcp_context;
-
-typedef struct __jcon_client_tcp_context
-{
-  int file_descriptor;
-  struct sockaddr_in socket_address;
-  char *reference_string;
-  int poll_timeout; // timeout in milliseconds
-  jlog_t *logger;
-} jcon_client_tcp_context_t;
-
+/**
+ * @brief Initialize client with IP and port.
+ * 
+ * Creates new socket. Uses DNS resolution, so also supports DNS names.
+ * 
+ * @param address IP address or DNS name of target server.
+ * @param port    Port, to which to connect.
+ * @param logger  jlog logger to use. If @c NULL , uses global logger.
+ * 
+ * @return        jcon_client session object.
+ * @return        @c NULL , if an error occured.
+ */
 jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t *logger);
+
+/**
+ * @brief Initializes client with already existing socket.
+ * 
+ * For example when accepting connection from server.
+ * Can be used to handle server connections.
+ * 
+ * @param file_descriptor File descriptor of socket.
+ * @param socket_address  Address struct of connection.
+ * @param logger          jlog logger to use. If @c NULL , uses global logger.
+ * 
+ * @return                jcon_client session object.
+ * @return                @c NULL , if an error occured.
+ */
 jcon_client_t *jcon_client_tcp_session_clone(int file_descriptor, struct sockaddr_in socket_address, jlog_t *logger);
-
-void jcon_client_tcp_session_free(void *ctx);
-
-int jcon_client_tcp_reset(void *ctx);
-void jcon_client_tcp_close(void *ctx);
-
-int jcon_client_tcp_isConnected(void *ctx);
-
-char *jcon_client_tcp_createReferenceString(struct sockaddr_in sock_address);
-const char *jcon_client_tcp_getReferenceString(void *ctx);
-char *jcon_client_tcp_getIP(struct sockaddr_in socket_address);
-uint16_t jcon_client_tcp_getPort(struct sockaddr_in socket_address);
-
-int jcon_client_tcp_newData(void *ctx);
-
-size_t jcon_client_tcp_recvData(void *ctx, void *data_ptr, size_t data_size);
-size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_size);
-
-void jcon_client_tcp_log(void *ctx, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
 #ifdef __cplusplus
 }

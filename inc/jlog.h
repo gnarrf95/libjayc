@@ -1,18 +1,20 @@
 /**
  * @file jlog.h
- * @author Manuel Nadji (manuel.nadji@gmail.com)
+ * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
  * @brief This is a logger system, that can call customized implementations.
  * 
  * jlog is a customizable logger system. This file contains the core
  * functionality and interface descriptions.
+ * 
  * A logger session needs handlers for log messages
  * ( @c #jlog_message_handler_t ), log messages with source code info
  * ( @c #jlog_message_handler_m_t ), as well as an optional session context for
  * implementation relevant data and a free handler
  * ( @c #jlog_session_free_handler_t ) to free the memory of the session
  * context.
- * Also every logger session has a maximum log level (to filter out
+ * 
+ * Also every logger session has a minimum log level (to filter out
  * unnecessary debug logs) and a there needs to be a @c _session_init
  * function, to initiate the session.
  * 
@@ -20,13 +22,12 @@
  * ( @c jlog_global_session_set() ). They can then either be used directly
  * with the global functions ( @c jlog_global_log_message() and
  * @c jlog_global_log_message_m() ), or with the macros ( @c #JLOG_DEBUG ,
- * @c #JLOG_INFO , @c #JLOG_WARN and @c #JLOG_ERROR ), which already use the
- * preprocessor macros for source code information ( @c \_\_FILE\_\_ ,
- * @c \_\_func\_\_ and @c \_\_LINE\_\_ ).
+ * @c #JLOG_INFO , @c #JLOG_WARN , @c #JLOG_ERROR , @c #JLOG_CRITICAL and
+ * @c #JLOG_FATAL ), which already use the preprocessor macros for source
+ * code information ( @c \_\_FILE\_\_ , @c \_\_func\_\_ and @c \_\_LINE\_\_ ).
  * The global session can then be freed using @c jlog_global_session_free() .
  * 
- * @date 2020-09-16
- * 
+ * @date 2020-09-21
  * @copyright Copyright (c) 2020 by Manuel Nadji
  * 
  */
@@ -79,6 +80,13 @@ void jlog_session_free(jlog_t *session);
  * @brief Logs message with session.
  * 
  * If available, calls @c jlog_t#log_function .
+ * 
+ * If @c log_type is @c #JLOG_LOGTYPE_FATAL , exits program with
+ * @c EXIT_FAILURE .
+ * If @c log_type is @c #JLOG_LOGTYPE_CRITICAL and @c JLOG_EXIT_ATCRITICAL
+ * is set, exits program with @c EXIT_FAILURE .
+ * If @c log_type is @c #JLOG_LOGTYPE_ERROR and @c JLOG_EXIT_ATERROR is set,
+ * exits program with @c EXIT_FAILURE .
  *
  * @param session   Session to use.
  * @param log_type  Log type of message (debug, info, warning, error).
@@ -91,6 +99,13 @@ void jlog_log_message(jlog_t *session, int log_type,
  * @brief Logs message with session, including source code info.
  *
  * If available, calls @c jlog_t#log_function_m .
+ * 
+ * If @c log_type is @c #JLOG_LOGTYPE_FATAL , exits program with
+ * @c EXIT_FAILURE .
+ * If @c log_type is @c #JLOG_LOGTYPE_CRITICAL and @c JLOG_EXIT_ATCRITICAL
+ * is set, exits program with @c EXIT_FAILURE .
+ * If @c log_type is @c #JLOG_LOGTYPE_ERROR and @c JLOG_EXIT_ATERROR is set,
+ * exits program with @c EXIT_FAILURE .
  * 
  * @param session   Session to use.
  * @param log_type  Log type of message (debug, info, warning, error).

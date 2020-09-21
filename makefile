@@ -35,7 +35,6 @@ TARGET_LIBJAYC = build/lib/libjayc.so
 # ==============================================================================
 # Install variables
 
-PREFIX = ./build/usr
 ifeq ($(PREFIX),)
 	PREFIX := /usr/local
 endif
@@ -47,8 +46,20 @@ TARGET_LIBJAYC_INSTALLED = $(PREFIX)/lib/$(subst build/lib/,,$(TARGET_LIBJAYC))
 # Build recipes
 
 # ------------------------------------------------------------------------------
+# Build all parts of the project
+all: all_libs docs
+
+# ------------------------------------------------------------------------------
+# Compile Library
+all_libs: $(TARGET_LIBJAYC)
+	@echo "All libraries done."
+
+$(TARGET_LIBJAYC): $(OBJ)
+	$(CC) -shared -o $@ $(INC) $? $(LIB)
+
+# ------------------------------------------------------------------------------
 # Compile Tests
-compile_test: $(OBJ)
+check: $(OBJ)
 	@echo "Source Code compiled successfully."
 
 # ------------------------------------------------------------------------------
@@ -79,7 +90,7 @@ uninstall_inc:
 
 # ------------------------------------------------------------------------------
 # Make Documentation
-all_docs: doc_doxygen
+docs: doc_doxygen
 	@echo "Documentation done."
 
 doc_md: 
@@ -95,14 +106,6 @@ doc_doxygen: Doxyfile
 
 # build/tests/%: tests/%.c $(OBJ)
 # 	$(CC) $? -o $@ $(INC) $(LIB)
-
-# ------------------------------------------------------------------------------
-# Compile Library
-all_libs: $(TARGET_LIBJAYC)
-	@echo "All libraries done."
-
-$(TARGET_LIBJAYC): $(OBJ)
-	$(CC) -shared -o $@ $(INC) $? $(LIB)
 
 # ------------------------------------------------------------------------------
 # General Recipes

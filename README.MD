@@ -3,6 +3,17 @@
 [![GitHub issues](https://img.shields.io/github/issues/gnarrf95/libjayc?style=flat-square)](https://github.com/gnarrf95/libjayc/issues)
 [![GitHub](https://img.shields.io/github/license/gnarrf95/libjayc?style=flat-square)](https://github.com/gnarrf95/libjayc/blob/master/LICENSE)
 
+```
+ _  _  _        ___                _____ 
+| |(_)| |      |_  |              /  __ \
+| | _ | |__      | |  __ _  _   _ | /  \/
+| || || '_ \     | | / _` || | | || |    
+| || || |_) |/\__/ /| (_| || |_| || \__/\
+|_||_||_.__/ \____/  \__,_| \__, | \____/
+                             __/ |       
+                            |___/        
+```
+
 `libjayc` is a C-only utility library, which implements a lot of useful
 features, to make the creation of projects easier. There are background
 features like Loggers, connectors, server handlers, etc.

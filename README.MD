@@ -32,10 +32,7 @@ it possible to use these implementations in a unified, abstract interface.
   * [Installation](#installation)
 * [Components](#components)
   * [jlog](#jlog)
-  * [jlog_stdio](#jlog_stdio)
-  * [jlog_syslog](#jlog_syslog)
   * [jcon_client](#jcon_client)
-  * [jcon_client_tcp](#jcon_client_tcp)
   * [jcon_thread](#jcon_thread)
 * [Using the Library](#using-the-library)
   * [Example Program](#example-program)
@@ -102,9 +99,9 @@ get a logger session, it defaults to the global logger).
 `_session_init()` functions from implementations will return a `jlog_t`
 pointer. This will be the session object to use in the interface functions.
 
-Since session object are dynamically allocated memory, the session must
+Since session objects are dynamically allocated memory, the session must
 be closed by calling `jlog_session_free()` whith the session object as
-parameter.   
+parameter.
 
 Logs messages are sent by using `jlog_log_message()` and `jlog_log_message_m()`.
 The `_m` suffix states, that the function is including source code
@@ -157,11 +154,87 @@ gcc -D JLOG_EXIT_ATCRITICAL ...
 gcc -D JLOG_EXIT_ATERROR ...
 ```
 
-### jlog_stdio
-### jlog_syslog
 ### jcon_client
-### jcon_client_tcp
+_jcon\_client_ is a interface for connector functionality.
+The concept is to create a template for implementations,
+that connect to a server using all types of communications
+and allow them to be controlled through a unified interface.
+
+For example, there can be implementations using TCP, UDP, HTTP,
+or more specialized protocols, like syslog protocol, UNIX sockets,
+websockets, etc.
+
+### Sessions
+`_session_init()` functions from implementations will return a `jcon_client_t`
+pointer. This will be the session object to use in the interface functions.
+
+Since session objects are dynamically allocated memory, the session must
+be closed by calling `jcon_client_session_free()` whith the session object as
+parameter.
+
+After initialization, the client must be reset (meaning closed if connected,
+then connect). This is done using the function `jcon_client_reset()`.   
+Likewise a session is closed using `jcon_client_close()`. This will
+automatically done, when the session is freed.
+
+With the function `jcon_client_isConnected()` the connection state can be
+checked.
+
+#### Data IO
+Data is sent and recieved as byte arrays. To send a message, the function
+`jcon_client_sendData()` is used. It needs the pointer to the array, as well
+as the size of the array.
+
+For recieving data, there is the function `jcon_client_newData()`, that returns
+if the client has data available to read.   
+If true, the data can be read using `jcon_client_recvData()`. Same as the
+send function, the recv function needs a byte array and its size.   
+It is also possible to give a NULL pointer for the byte array. In this case,
+the function will read from the client (as many bytes as stated in size
+parameter) but nothing can be done with the data.
+
+#### Getters
+_jcon\_client_ also has getters, to request information about the client.
+
+`jcon_client_getConnectionType()` will return a string representing the
+type of implementation (type of communication). This can be for example:
+* `TCP`
+* `UDP`
+* `UNIX_SOCK`
+* etc.
+
+`jcon_client_getReferenceString()` adds to that information about the
+connection. In case of a TCP connection, that would be IP address and port
+the client is connected to.   
+Example: `TCP:127.0.0.1:4443`
+
 ### jcon_thread
+_jcon\_thread_ is a threaded jcon_client. The thread runs in a loop and
+checks for new data and for disconnects.
+
+There are handlers that trigger, when there is new data available, or
+when the client disconnects.
+
+#### Interface
+_jcon\_thread_ gets initialized using `jcon_thread_init()`. It needs
+a client, the handlers, a logger and a context that gets passed to the
+handlers as a parameter.
+
+Likewise, the thread gets destroyed with `jcon_thread_free()`.   
+This tells the thread to stop and waits for it to exit.
+It then frees any memory allocated.
+
+The client does not get automatically destroyed. This has to be done either
+manually, after the thread was destroyed; or in the
+`jcon_thread_close_handler()`.
+
+#### Getters
+_jcon\_thread_ has getters to give information about its and the clients
+status.
+
+`jcon_thread_isRunning()` tells, if the thread is still running.   
+`jcon_thread_getConnectionType()` gives the connection type of the client.   
+`jcon_thread_getReferenceString()` gives the reference string of the client.
 
 ## Using The Library
 

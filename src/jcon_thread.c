@@ -17,16 +17,21 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <time.h>
 
 /**
  * @brief Holds data necessary for jcon_thread runtime.
  */
 typedef struct __jcon_thread_runtime_data jcon_thread_runtime_data_t;
 
+#define JCON_THREAD_LOOPSLEEP_DEFAULT 100000000
+
 struct __jcon_thread_runtime_data
 {
   jcon_client_t *client;
   pthread_mutex_t mutex;
+  long loop_sleep;                          /**< How long the loop will wait (in nanoseconds), before continuing. */
   int run;
 
   jcon_thread_data_handler_t data_handler;
@@ -44,6 +49,8 @@ struct __jcon_thread_session
 };
 
 static void *jcon_thread_run_function(void *session_ptr);
+
+static void jcon_thread_loop_sleep(jcon_thread_t *session);
 
 static void jcon_thread_log(jcon_thread_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
@@ -102,6 +109,7 @@ jcon_thread_t *jcon_thread_init
 
   session->runtime_data.client = client;
   session->runtime_data.run = false;
+  session->runtime_data.loop_sleep = JCON_THREAD_LOOPSLEEP_DEFAULT;
   
   session->runtime_data.data_handler = data_handler;
   session->runtime_data.create_handler = create_handler;
@@ -130,7 +138,7 @@ void jcon_thread_free(jcon_thread_t *session)
     return;
   }
 
-  if(session->runtime_data.run)
+  if(jcon_thread_isRunning(session))
   {
     jcon_thread_stop(session);
   }
@@ -148,7 +156,13 @@ int jcon_thread_isRunning(jcon_thread_t *session)
     return false;
   }
 
-  return session->runtime_data.run;
+  int ret;
+
+  jcon_thread_pthread_mutex_lock(session);
+  ret = session->runtime_data.run;
+  jcon_thread_pthread_mutex_unlock(session);
+
+  return ret;
 }
 
 //------------------------------------------------------------------------------
@@ -185,6 +199,8 @@ const char *jcon_thread_getReferenceString(jcon_thread_t *session)
 //
 void *jcon_thread_run_function(void *session_ptr)
 {
+  int run_loop;
+
   if(session_ptr == NULL)
   {
     CRITICAL(NULL, "session_ptr is NULL.");
@@ -192,11 +208,16 @@ void *jcon_thread_run_function(void *session_ptr)
 
   jcon_thread_t *session = (jcon_thread_t *)session_ptr;
 
-  while(session->runtime_data.run)
+  jcon_thread_pthread_mutex_lock(session);
+  run_loop = session->runtime_data.run;
+  jcon_thread_pthread_mutex_unlock(session);
+  
+  while(run_loop)
   {
+    /* Check connection state */
+    jcon_thread_pthread_mutex_lock(session);
     if(jcon_client_isConnected(session->runtime_data.client) == false)
     {
-      jcon_thread_pthread_mutex_lock(session);
       session->runtime_data.run = false;
       if(session->runtime_data.close_handler)
       {
@@ -206,11 +227,11 @@ void *jcon_thread_run_function(void *session_ptr)
           jcon_thread_getReferenceString(session)
         );
       }
-      jcon_thread_pthread_mutex_unlock(session);
-
-      break;
     }
+    jcon_thread_pthread_mutex_unlock(session);
 
+    /* Check for new data */
+    jcon_thread_pthread_mutex_lock(session);
     if(jcon_client_newData(session->runtime_data.client))
     {
       if(session->runtime_data.data_handler)
@@ -221,10 +242,39 @@ void *jcon_thread_run_function(void *session_ptr)
         );
       }
     }
+    jcon_thread_pthread_mutex_unlock(session);
+
+    jcon_thread_loop_sleep(session);
+
+    /* Check for termination */
+    jcon_thread_pthread_mutex_lock(session);
+    run_loop = session->runtime_data.run;
+    jcon_thread_pthread_mutex_unlock(session);
   }
 
   DEBUG(session, "jcon_thread stopped.");
   return NULL;
+}
+
+//------------------------------------------------------------------------------
+//
+void jcon_thread_loop_sleep(jcon_thread_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return false;
+  }
+
+  struct timespec slp;
+  slp.tv_sec = 0;
+  slp.tv_nsec = session->runtime_data.loop_sleep;
+
+  int ret_sleep = nanosleep(&slp, NULL);
+  if(ret_sleep)
+  {
+    ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -277,9 +327,11 @@ int jcon_thread_start(jcon_thread_t *session)
     return false;
   }
 
+  jcon_thread_pthread_mutex_lock(session);
   if(jcon_thread_pthread_init(session) == false)
   {
     ERROR(session, "pthread could not be created.");
+    jcon_thread_pthread_mutex_unlock(session);
     jcon_thread_pthread_mutex_destroy(session);
     return false;
   }
@@ -293,6 +345,7 @@ int jcon_thread_start(jcon_thread_t *session)
       jcon_thread_getReferenceString(session)
     );
   }
+  jcon_thread_pthread_mutex_unlock(session);
 
   return true;
 }
@@ -307,13 +360,21 @@ void jcon_thread_stop(jcon_thread_t *session)
     return;
   }
 
-  if(session->runtime_data.run == false)
+  int is_running;
+
+  jcon_thread_pthread_mutex_lock(session);
+  is_running = session->runtime_data.run;
+  jcon_thread_pthread_mutex_unlock(session);
+
+  if(is_running == false)
   {
     WARN(session, "Thread not running.");
     return;
   }
 
+  jcon_thread_pthread_mutex_lock(session);
   session->runtime_data.run = false;
+  jcon_thread_pthread_mutex_unlock(session);
 
   jcon_thread_pthread_join(session);
   jcon_thread_pthread_mutex_destroy(session);

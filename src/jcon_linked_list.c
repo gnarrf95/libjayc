@@ -43,11 +43,23 @@ jcon_linked_list_node_t *jcon_linked_list_insert(jcon_linked_list_node_t *head, 
 
 //------------------------------------------------------------------------------
 //
-void jcon_linked_list_delete(jcon_linked_list_node_t *head, jcon_linked_list_node_t *to_rem)
+jcon_linked_list_node_t *jcon_linked_list_next(jcon_linked_list_node_t *head)
 {
   if(head == NULL)
   {
-    return;
+    return NULL;
+  }
+
+  return head->next;
+}
+
+//------------------------------------------------------------------------------
+//
+jcon_linked_list_node_t *jcon_linked_list_delete(jcon_linked_list_node_t *head, jcon_linked_list_node_t *to_rem)
+{
+  if(head == NULL)
+  {
+    return NULL;
   }
 
   jcon_linked_list_node_t *iterator = head;
@@ -57,7 +69,7 @@ void jcon_linked_list_delete(jcon_linked_list_node_t *head, jcon_linked_list_nod
   {
     if(iterator->next == NULL)
     {
-      return;
+      return NULL;
     }
 
     previous = iterator;
@@ -74,6 +86,7 @@ void jcon_linked_list_delete(jcon_linked_list_node_t *head, jcon_linked_list_nod
   }
 
   free(iterator);
+  return previous->next;
 }
 
 //------------------------------------------------------------------------------

@@ -21,10 +21,12 @@
 extern "C" {
 #endif
 
+#include <stdlib.h>
+
 typedef struct __jcon_linked_list_node
 {
   void *data;
-  struct node *next;
+  struct __jcon_linked_list_node *next;
 } jcon_linked_list_node_t;
 
 /**
@@ -40,14 +42,26 @@ typedef struct __jcon_linked_list_node
 jcon_linked_list_node_t *jcon_linked_list_insert(jcon_linked_list_node_t *head, void *data);
 
 /**
+ * @brief Returns next node in list.
+ * 
+ * @param head    Head of list.
+ * 
+ * @return        Next node in list.
+ * @return        @c NULL , if head is last element or error occured.
+ */
+jcon_linked_list_node_t *jcon_linked_list_next(jcon_linked_list_node_t *head);
+
+/**
  * @brief Removes node from linked list.
  * 
  * This function does not free any allocated data saved in node.
  * 
  * @param head    Head of list.
  * @param to_rem  Node to remove from list.
+ * 
+ * @return        Next node in list.
  */
-void jcon_linked_list_delete(jcon_linked_list_node_t *head, jcon_linked_list_node_t *to_rem);
+jcon_linked_list_node_t *jcon_linked_list_delete(jcon_linked_list_node_t *head, jcon_linked_list_node_t *to_rem);
 
 /**
  * @brief Returns the number of nodes in the list.

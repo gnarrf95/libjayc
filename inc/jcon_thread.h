@@ -164,7 +164,7 @@ int jcon_thread_isRunning(jcon_thread_t *session);
  * @param session Session to check.
  * 
  * @return        Connection type of jcon_client.
- * @return        NULL, if failed.
+ * @return        @c NULL , if failed.
  */
 const char *jcon_thread_getConnectionType(jcon_thread_t *session);
 
@@ -174,7 +174,7 @@ const char *jcon_thread_getConnectionType(jcon_thread_t *session);
  * @param session Session to check.
  * 
  * @return        Reference string of jcon_client.
- * @return        NULL, if failed.
+ * @return        @c NULL , if failed.
  */
 const char *jcon_thread_getReferenceString(jcon_thread_t *session);
 

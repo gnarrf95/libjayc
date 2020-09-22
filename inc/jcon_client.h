@@ -31,17 +31,17 @@ typedef struct __jcon_client_session jcon_client_t;
 /**
  * @brief Frees session memory.
  *
- * @param session Session object to Destroy.
+ * @param session Session object to destroy.
  */
 void jcon_client_session_free(jcon_client_t *session);
 
 /**
  * @brief Reset connection of session.
  *
- * @param  session Session to reset.
+ * @param  session  Session to reset.
  * 
- * @return @c true , if reset was successful.
- * @return @c false , if reset failed.
+ * @return          @c true , if reset was successful.
+ * @return          @c false , if reset failed.
  */
 int jcon_client_reset(jcon_client_t *session);
 

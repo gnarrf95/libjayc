@@ -17,11 +17,11 @@
 #ifndef INCLUDE_JCON_LINKED_LIST_H
 #define INCLUDE_JCON_LINKED_LIST_H
 
+#include <stdlib.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdlib.h>
 
 typedef struct __jcon_linked_list_node
 {

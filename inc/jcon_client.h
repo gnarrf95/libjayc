@@ -17,11 +17,11 @@
 #ifndef INCLUDE_JCON_CLIENT_H
 #define INCLUDE_JCON_CLIENT_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stddef.h>
 
 /**
  * @brief jcon_client session object, holds data and functions for operation.

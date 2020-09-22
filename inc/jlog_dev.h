@@ -12,11 +12,11 @@
 #ifndef INCLUDE_JLOG_DEV_H
 #define INCLUDE_JLOG_DEV_H
 
+#include <jlog.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <jlog.h>
 
 /**
  * @brief Function to handle log calls.

@@ -12,14 +12,13 @@
 #ifndef INCLUDE_JCON_CLIENT_TCP_H
 #define INCLUDE_JCON_CLIENT_TCP_H
 
+#include <jcon_client.h>
+#include <jlog.h>
+#include <netinet/in.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <jcon_client.h>
-
-#include <jlog.h>
-#include <netinet/in.h>
 
 /**
  * @brief Initialize client with IP and port.

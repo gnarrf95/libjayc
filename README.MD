@@ -26,6 +26,7 @@
   * [jlog](#jlog)
   * [jcon_client](#jcon_client)
   * [jcon_thread](#jcon_thread)
+  * [jcon_server](#jcon_server)
 * [Using the Library](#using-the-library)
   * [Example Program](#example-program)
   * [Compiling Programs with libJayC](#compiling-programs-with-libjayc)
@@ -233,6 +234,8 @@ status.
 `jcon_thread_isRunning()` tells, if the thread is still running.   
 `jcon_thread_getConnectionType()` gives the connection type of the client.   
 `jcon_thread_getReferenceString()` gives the reference string of the client.
+
+### jcon_server
 
 ## Using The Library
 

@@ -2,7 +2,7 @@
  * @file jcon_client_dev.h
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief Necessary definition for implementations of jcon.
+ * @brief Necessary definition for implementations of jcon_client.
  * 
  * @date 2020-09-21
  * @copyright Copyright (c) 2020 by Manuel Nadji

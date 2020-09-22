@@ -205,6 +205,7 @@ void *jcon_thread_run_function(void *session_ptr)
   if(session_ptr == NULL)
   {
     CRITICAL(NULL, "session_ptr is NULL.");
+    return NULL;
   }
 
   jcon_thread_t *session = (jcon_thread_t *)session_ptr;
@@ -361,13 +362,7 @@ void jcon_thread_stop(jcon_thread_t *session)
     return;
   }
 
-  int is_running;
-
-  jcon_thread_pthread_mutex_lock(session);
-  is_running = session->runtime_data.run;
-  jcon_thread_pthread_mutex_unlock(session);
-
-  if(is_running == false)
+  if(session->runtime_data.run == false)
   {
     WARN(session, "Thread not running.");
     return;

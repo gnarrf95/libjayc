@@ -250,7 +250,7 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
   if(hostinfo == NULL)
   {
     ERROR(NULL, "<TCP:%s:%u> gethostbyname() failed. Destroying context and session.", address, port);
-    jcon_client_tcp_session_free(ctx);
+    free(ctx);
     free(session);
     return NULL;
   }
@@ -265,17 +265,6 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
     free(session);
     return NULL;
   }
-
-  // int ret_reset = jcon_client_tcp_reset(ctx);
-  // if(ret_reset)
-  // {
-  //   return session;
-  // }
-  
-  // ERROR(ctx, "jcon_client_tcp_reset() failed. Destroying context and session.");
-  // jcon_client_tcp_session_free(ctx);
-  // free(session);
-  // return NULL;
 
   return session;
 }

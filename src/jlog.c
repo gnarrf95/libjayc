@@ -1,3 +1,14 @@
+/**
+ * @file jlog.c
+ * @author Manuel Nadji (https://github.com/gnarrf95)
+ * 
+ * @brief Definition of functions for jlog interface.
+ * 
+ * @date 2020-09-21
+ * @copyright Copyright (c) 2020 by Manuel Nadji
+ * 
+ */
+
 #include <jlog.h>
 #include <jlog_dev.h>
 #include <stdio.h>

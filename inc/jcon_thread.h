@@ -1,6 +1,6 @@
 /**
  * @file jcon_thread.h
- * @author Manuel Nadji (manuel.nadji@gmail.com)
+ * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
  * @brief This system automates jcon_client handling in a thread.
  * 
@@ -20,8 +20,7 @@
  * The session holds a session context, that is provided at initialization
  * and passed into all headers, to use in implementation.
  * 
- * @date 2020-09-18
- * 
+ * @date 2020-09-21
  * @copyright Copyright (c) 2020 by Manuel Nadji
  * 
  * @todo Is @c #jcon_thread_create_handler_t needed?
@@ -46,11 +45,6 @@ extern "C" {
  * @brief jcon_thread session object.
  */
 typedef struct __jcon_thread_session jcon_thread_t;
-
-/**
- * @brief Holds data necessary for jcon_thread runtime.
- */
-typedef struct __jcon_thread_runtime_data jcon_thread_runtime_data_t;
 
 //==============================================================================
 // Define create and close types.

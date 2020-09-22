@@ -1,34 +1,96 @@
+# ==============================================================================
+# Compiler
+
 CC = gcc -Wall -Werror -std=c11 -fPIC
-CXX = g++ -Wall -Werror -std=c++11 -fPIC
+
+# ==============================================================================
+#Compiler and linker flags
 
 INC = -I inc/
-
 CFLAGS = `mysql_config --cflags`
-CXXFLAGS = `mysql_config --cxxflags`
-
 LIB_JANSSON = -ljansson
 LIB_PTHREAD = -lpthread
 LIB_MYSQL = `mysql_config --libs`
-
 LIB = $(LIB_PTHREAD)
 
-SRC_C = $(wildcard src/*.c)
-SRC_CPP = $(wildcard src/*.cpp)
-SRC_TESTS_C = $(wildcard tests/*.c)
-SRC_TESTS_CPP = $(wildcard tests/*.cpp)
+# ==============================================================================
+# Sources
 
-OBJ_C = $(subst src, build/objects, $(SRC_C:.c=.o))
-OBJ_CPP = $(subst src, build/objects, $(SRC_CPP:.cpp=.o))
+HEADERS = $(wildcard inc/*.h)
 
-TARGET_TESTS_C = $(subst tests, build/tests, $(SRC_TESTS_C:.c=))
-TARGET_TESTS_CPP = $(subst tests, build/tests, $(SRC_TESTS_CPP:.cpp=))
+SRC = $(wildcard src/*.c)
+SRC_TESTS = $(wildcard tests/*.c)
+
+# ==============================================================================
+# Objects
+
+OBJ = $(subst src, build/objects, $(SRC:.c=.o))
+
+# ==============================================================================
+# Targets
 
 TARGET_LIBJAYC = build/lib/libjayc.so
+# TARGET_TESTS = $(subst tests, build/tests, $(SRC_TESTS:.c=))
 
-compile_test: $(OBJ_C) $(OBJ_CPP)
+# ==============================================================================
+# Install variables
+
+ifeq ($(PREFIX),)
+	PREFIX := /usr/local
+endif
+
+HEADERS_INSTALLED = $(subst inc/,$(PREFIX)/include/,$(HEADERS))
+TARGET_LIBJAYC_INSTALLED = $(PREFIX)/lib/$(subst build/lib/,,$(TARGET_LIBJAYC))
+
+# ==============================================================================
+# Build recipes
+
+# ------------------------------------------------------------------------------
+# Build all parts of the project
+all: all_libs docs
+
+# ------------------------------------------------------------------------------
+# Compile Library
+all_libs: $(TARGET_LIBJAYC)
+	@echo "All libraries done."
+
+$(TARGET_LIBJAYC): $(OBJ)
+	$(CC) -shared -o $@ $(INC) $? $(LIB)
+
+# ------------------------------------------------------------------------------
+# Compile Tests
+check: $(OBJ)
 	@echo "Source Code compiled successfully."
 
-all_docs: doc_doxygen
+# ------------------------------------------------------------------------------
+# Library Installation
+install: install_lib install_inc
+	@echo "Installation finished."
+
+install_lib: $(TARGET_LIBJAYC) preinstall
+	install -m 644 $(TARGET_LIBJAYC) $(PREFIX)/lib/
+
+install_inc: preinstall
+	for header in $(HEADERS); do install -m 644 $$header $(PREFIX)/include/; done
+
+preinstall:
+	install -d $(PREFIX)/include/
+	install -d $(PREFIX)/lib/
+
+# ------------------------------------------------------------------------------
+# Library Uninstall
+uninstall: uninstall_lib uninstall_inc
+	@echo "Uninstallation finished."
+
+uninstall_lib:
+	rm -f $(TARGET_LIBJAYC_INSTALLED)
+
+uninstall_inc:
+	for header in $(HEADERS_INSTALLED); do rm $$header; done
+
+# ------------------------------------------------------------------------------
+# Make Documentation
+docs: doc_doxygen
 	@echo "Documentation done."
 
 doc_md: 
@@ -37,26 +99,19 @@ doc_md:
 doc_doxygen: Doxyfile
 	doxygen Doxyfile
 
-all_tests: $(TARGET_TESTS_C) $(TARGET_TESTS_CPP)
-	@echo "All tests done."
+# ------------------------------------------------------------------------------
+# Make Tests
+# all_tests: $(TARGET_TESTS)
+# 	@echo "All tests done."
 
-all_libs: $(TARGET_LIBJAYC)
-	@echo "All libraries done."
+# build/tests/%: tests/%.c $(OBJ)
+# 	$(CC) $? -o $@ $(INC) $(LIB)
 
-$(TARGET_LIBJAYC): $(OBJ_C) $(OBJ_CPP)
-	$(CC) -shared -o $@ $(INC) $? $(LIB)
-
-build/tests/%: tests/%.c $(OBJ_C)
-	$(CC) $? -o $@ $(INC) $(LIB)
-
-build/tests/%: tests/%.cpp $(OBJ_C) $(OBJ_CPP)
-	$(CXX) $? -o $@ $(INC)
+# ------------------------------------------------------------------------------
+# General Recipes
 
 build/objects/%.o: src/%.c build
 	$(CC) -c $< -o $@ $(INC) $(CFLAGS)
-
-build/objects/%.o: src/%.cpp build
-	$(CXX) -c $< -o $@ $(INC) $(CXXFLAGS)
 
 build:
 	mkdir -p build/objects
@@ -65,5 +120,5 @@ build:
 	mkdir -p build/bin
 
 clean:
-	rm -rf $(TARGET_TESTS_C) $(TARGET_TESTS_CPP) $(TARGET_LIBJAYC) $(OBJ_C) $(OBJ_CPP) docs/doxygen/ build/
+	rm -rf $(TARGET_TESTS) $(TARGET_LIBJAYC) $(OBJ) docs/doxygen/ build/
 	clear

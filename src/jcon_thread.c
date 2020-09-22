@@ -4,10 +4,12 @@
  * 
  * @brief Implements jcon_thread.
  * 
- * @date 2020-09-21
+ * @date 2020-09-22
  * @copyright Copyright (c) 2020 by Manuel Nadji
  * 
  */
+
+#define _POSIX_C_SOURCE 199309L /* needed for nanosleep() */
 
 #include <jcon_thread.h>
 #include <pthread.h>
@@ -17,7 +19,6 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <time.h>
 
 /**
@@ -263,7 +264,7 @@ void jcon_thread_loop_sleep(jcon_thread_t *session)
   if(session == NULL)
   {
     ERROR(NULL, "Session is NULL.");
-    return false;
+    return;
   }
 
   struct timespec slp;

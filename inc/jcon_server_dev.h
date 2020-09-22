@@ -12,54 +12,103 @@
 #ifndef INCLUDE_JCON_SERVER_DEV_H
 #define INCLUDE_JCON_SERVER_DEV_H
 
+#include <jcon_server.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <jcon_server.h>
-#include <jcon_thread.h>
-#include <jcon_client.h>
-#include <jcon_linked_list.h>
-#include <pthread.h>
-
-void jcon_server_log(jcon_server_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
-
+/**
+ * @brief Handler to destroy the session context.
+ * 
+ * Session carries its own functions and data used
+ * for implementations. If the data is dynamically
+ * allocated. To free this memory at the destruction
+ * of the session, this handler can be provided.
+ * 
+ * @param ctx Session context to destroy.
+ */
 typedef void(*jcon_server_free_handler_t)(void *ctx);
 
+/**
+ * @brief Function to handle session reset calls.
+ * 
+ * Restarts server.
+ * 
+ * @param ctx Context pointer for session data.
+ * 
+ * @return    @c true , if reset was successful.
+ * @return    @c false , if reset failed.
+ */
 typedef int(*jcon_server_reset_handler_t)(void *ctx);
 
+/**
+ * @brief Function to handle session close calls.
+ * 
+ * Closes server.
+ * 
+ * @param ctx Context pointer for session data.
+ */
 typedef void(*jcon_server_close_handler_t)(void *ctx);
 
-typedef int(*jcon_server_isRunning_handler_t)(void *ctx);
+/**
+ * @brief Function to handle requests for connection state.
+ * 
+ * @param ctx Context pointer for session data.
+ * 
+ * @return    @c true , if connected.
+ * @return    @c false , if not connected or error occured.
+ */
+typedef int(*jcon_server_isOpen_handler_t)(void *ctx);
 
+/**
+ * @brief Function to handle request for reference string.
+ * 
+ * @param ctx Context pointer for session data.
+ * 
+ * @return    String with reference to server connection.
+ * @return    NULL, if failed.
+ */
 typedef const char*(*jcon_server_getReferenceString_handler_t)(void *ctx);
 
-typedef int(*jcon_server_listen_handler_t)(void *ctx);
-typedef jcon_client_t*(*jcon_server_accept_handler_t)(void *ctx);
+/**
+ * @brief Function to handle requests, if server has new connection available.
+ * 
+ * @param ctx Context pointer for session data.
+ * 
+ * @return    @c true , if new connection is available.
+ * @return    @c false , if no new connection or error occured.
+ */
+typedef int(*jcon_server_newConnection_handler_t)(void *ctx);
 
+/**
+ * @brief Function to accept new connection.
+ * 
+ * @param ctx Context pointer for session data.
+ * 
+ * @return    jcon_client session object, connected to new client.
+ * @return    @c NULL , if no new connection or error occured.
+ */
+typedef jcon_client_t*(*jcon_server_acceptConnection_handler_t)(void *ctx);
+
+/**
+ * @brief jcon_server session object, holds data and functions for operation.
+ */
 struct __jcon_server_session
 {
-  pthread_t control_thread;
-  pthread_mutex_t mutex;
-  jcon_linked_list_node_t *connections;
-  int run;
+  jcon_server_free_handler_t session_free_handler;                      /**< Pointer to function, which frees context memory. */
 
-  jlog_t *logger;
-  const char *connection_type;
-  void *implementation_context;
-  void *session_context;
+  jcon_server_reset_handler_t function_reset;                           /**< Pointer to function, to reset server. */
+  jcon_server_close_handler_t function_close;                           /**< Pointer to function, to close server. */
 
-  jcon_client_session_free_handler_t server_free_handler;
-  jcon_server_reset_handler_t server_reset_handler;
-  jcon_server_close_handler_t server_close_handler;
-  jcon_server_isRunning_handler_t server_isRunning_handler;
-  jcon_server_getReferenceString_handler_t server_getReferenceString_handler;
-  jcon_server_listen_handler_t server_listen_handler;
-  jcon_server_accept_handler_t server_accept_handler;
+  jcon_server_isOpen_handler_t function_isOpen;                         /**< Pointer to function, to check wether the server is open. */
+  jcon_server_getReferenceString_handler_t function_getReferenceString; /**< Pointer to function, which returns connection info. */
 
-  jcon_thread_data_handler_t data_handler;
-  jcon_thread_create_handler_t create_handler;
-  jcon_thread_close_handler_t close_handler;
+  jcon_server_newConnection_handler_t function_newConnection;           /**< Pointer to function, which checks if new connections are available. */
+  jcon_server_acceptConnection_handler_t function_acceptConnection;     /**< Pointer to function, which accepts and returns new connection. */
+
+  const char *connection_type;                                          /**< String to show, which type of connection the session is holding. */
+  void *session_context;                                                /**< Context pointer, holds data for implementation. */
 };
 
 #ifdef __cplusplus

@@ -82,7 +82,14 @@ jutil_linkedlist_t *jutil_linkedlist_push(jutil_linkedlist_t *list, void *data)
 {
   if(list == NULL)
   {
-    return NULL;
+    jutil_linkedlist_t *node = jutil_linkedlist_allocNode();
+    if(node == NULL)
+    {
+      return NULL;
+    }
+
+    node->data = data;
+    return node;
   }
 
   jutil_linkedlist_t *node = jutil_linkedlist_allocNode();
@@ -154,7 +161,14 @@ jutil_linkedlist_t *jutil_linkedlist_append(jutil_linkedlist_t *list, void *data
 {
   if(list == NULL)
   {
-    return NULL;
+    jutil_linkedlist_t *node = jutil_linkedlist_allocNode();
+    if(node == NULL)
+    {
+      return NULL;
+    }
+
+    node->data = data;
+    return node;
   }
 
   jutil_linkedlist_t *node = jutil_linkedlist_allocNode();

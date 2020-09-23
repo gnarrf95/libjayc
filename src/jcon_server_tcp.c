@@ -48,26 +48,120 @@ typedef struct __jcon_server_tcp_context jcon_server_tcp_context_t;
 // Declare handlers and internal functions.
 //==============================================================================
 
+/**
+ * @brief Function for context free handler.
+ * 
+ * Will free context data.
+ * 
+ * @param ctx Session context to free.
+ */
 static void jcon_server_tcp_session_free(void *ctx);
 
+/**
+ * @brief Function for reset handler.
+ * 
+ * Restarts the server.
+ * 
+ * @param ctx Context pointer with socket data.
+ * 
+ * @return    @c true , if reset was successful.
+ * @return    @c false , if reset failed.
+ */
 static int jcon_server_tcp_reset(void *ctx);
 
+/**
+ * @brief Function for close handler.
+ * 
+ * Closes server socket.
+ * 
+ * @param ctx Context pointer with socket data.
+ */
 static void jcon_server_tcp_close(void *ctx);
 
+/**
+ * @brief Checks if socket is open.
+ * 
+ * @param ctx Context pointer with socket data.
+ * 
+ * @return    @c true , if socket is open.
+ * @return    @c false , if socket closed or error occured.
+ */
 static int jcon_server_tcp_isOpen(void *ctx);
 
+/**
+ * @brief Creates @c jcon_server_tcp_context_t#reference_string .
+ * 
+ * @param socket_address  Socket address of server.
+ * 
+ * @return                Allocated string for reference.
+ * @return                @c NULL , if error occured.
+ */
 static char *jcon_server_tcp_createReferenceString(struct sockaddr_in socket_address);
 
+/**
+ * @brief Returnes @c jcon_server_tcp_context_t#reference_string .
+ * 
+ * @param ctx Context of session to ask from.
+ * 
+ * @return    Session string.
+ * @return    @c NULL , if error occured.
+ */
 static const char *jcon_server_tcp_getReferenceString(void *ctx);
 
+/**
+ * @brief Gets IP address from socket address struct.
+ * 
+ * @param socket_address  Socket address to check.
+ * 
+ * @return                String with IP address.
+ * @return                @c NULL , if error occured.
+ */
 static char *jcon_server_tcp_getIP(struct sockaddr_in socket_address);
 
+/**
+ * @brief Gets Port number from socket address struct.
+ * 
+ * @param socket_address  Socket address to check.
+ * 
+ * @return                Port number.
+ * @return                @c 0 , if error occured.
+ */
 static uint16_t jcon_server_tcp_getPort(struct sockaddr_in socket_address);
 
+/**
+ * @brief Checks, if new connection is available.
+ * 
+ * Polls socket, to check if new connections are available.
+ * 
+ * @param ctx Context of session to check.
+ * 
+ * @return    @c true , if new connection is available.
+ * @return    @c false , if no connection or error occured.
+ */
 static int jcon_server_tcp_newConnection(void *ctx);
 
+/**
+ * @brief Accepts connection and creates jcon_client.
+ * 
+ * @param ctx Context of session to check.
+ * 
+ * @return    New jcon_client session object.
+ * @return    @c NULL , if error occured.
+ */
 static jcon_client_t *jcon_server_tcp_acceptConnection(void *ctx);
 
+/**
+ * @brief Logs debug and error messages.
+ * 
+ * Uses logger from @c ctx , or if logger is @c NULL , uses global logger.
+ * 
+ * @param ctx       Session for info about connection.
+ * @param log_type  Type of log message.
+ * @param file      Source code file, where message was logged.
+ * @param function  Function in which message was logged.
+ * @param line      Line, where message was logged.
+ * @param fmt       Format string for stdarg.h .
+ */
 static void jcon_server_tcp_log(void *ctx, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
 //==============================================================================

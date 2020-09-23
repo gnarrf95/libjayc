@@ -38,6 +38,19 @@ typedef struct __jlog_stdio_color_context
   char *error_color;
 } jlog_stdio_color_context_t;
 
+/**
+ * @brief Allocates memory for color string and copies from param.
+ * 
+ * This was implemented, because @c strcpy() triggers
+ * devskim warnings.
+ * 
+ * @param str String to copy.
+ * 
+ * @return    New allocated string.
+ * @return    @c NULL , if an error occured.
+ */
+static char *jlog_stdio_color_init_colorString(const char *str);
+
 /*******************************************************************************
  * @brief Destroys jlog_stdio_color_context object.
  * 
@@ -87,8 +100,7 @@ void *jlog_stdio_color_context_init(const char *debug_color, const char *info_co
 
   if(debug_color)
   {
-    ctx->debug_color = (char *)malloc(sizeof(char) * (strlen(debug_color) + 1));
-    strcpy(ctx->debug_color, debug_color);
+    ctx->debug_color = jlog_stdio_color_init_colorString(debug_color);
   }
   else
   {
@@ -97,8 +109,7 @@ void *jlog_stdio_color_context_init(const char *debug_color, const char *info_co
 
   if(info_color)
   {
-    ctx->info_color = (char *)malloc(sizeof(char) * (strlen(info_color) + 1));
-    strcpy(ctx->info_color, info_color);
+    ctx->info_color = jlog_stdio_color_init_colorString(info_color);
   }
   else
   {
@@ -107,8 +118,7 @@ void *jlog_stdio_color_context_init(const char *debug_color, const char *info_co
 
   if(warn_color)
   {
-    ctx->warn_color = (char *)malloc(sizeof(char) * (strlen(warn_color) + 1));
-    strcpy(ctx->warn_color, warn_color);
+    ctx->warn_color = jlog_stdio_color_init_colorString(warn_color);
   }
   else
   {
@@ -117,8 +127,7 @@ void *jlog_stdio_color_context_init(const char *debug_color, const char *info_co
 
   if(error_color)
   {
-    ctx->error_color = (char *)malloc(sizeof(char) * (strlen(error_color) + 1));
-    strcpy(ctx->error_color, error_color);
+    ctx->error_color = jlog_stdio_color_init_colorString(error_color);
   }
   else
   {
@@ -126,6 +135,28 @@ void *jlog_stdio_color_context_init(const char *debug_color, const char *info_co
   }
 
   return (void *)ctx;
+}
+
+//------------------------------------------------------------------------------
+//
+char *jlog_stdio_color_init_colorString(const char *str)
+{
+  if(str == NULL)
+  {
+    return NULL;
+  }
+
+  size_t size_ret = sizeof(char) * (strlen(str) + 1);
+  char *ret = (char *)malloc(size_ret);
+  if(ret == NULL)
+  {
+    return NULL;
+  }
+
+  bzero(ret, size_ret);
+  memcpy(ret, str, size_ret);
+
+  return ret;
 }
 
 //------------------------------------------------------------------------------

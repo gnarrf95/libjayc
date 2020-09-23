@@ -18,7 +18,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
-#include <strings.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -446,7 +445,7 @@ char *jcon_client_tcp_createReferenceString(struct sockaddr_in socket_address)
 
   /* Changed implementation from using strcpy, to using memcpy;
      to calm down devskim checks. */
-  bzero(ret, size_refString);
+  memset(ret, 0, size_refString);
   memcpy(ret, buf, size_refString);
 
   return ret;

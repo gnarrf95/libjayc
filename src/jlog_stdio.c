@@ -15,7 +15,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 #define JLOG_STDIO_COLOR_RESET "\033[0m"
 
@@ -154,7 +153,7 @@ char *jlog_stdio_color_init_colorString(const char *str)
     return NULL;
   }
 
-  bzero(ret, size_ret);
+  memset(ret, 0, size_ret);
   memcpy(ret, str, size_ret);
 
   return ret;

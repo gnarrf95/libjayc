@@ -30,12 +30,12 @@
 #ifndef INCLUDE_JCON_THREAD_H
 #define INCLUDE_JCON_THREAD_H
 
+#include <jcon_client_dev.h>
+#include <jlog.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <jcon_client_dev.h>
-#include <jlog.h>
 
 //==============================================================================
 // Define object types.

@@ -25,8 +25,8 @@
 * [Components](#components)
   * [jlog](#jlog)
   * [jcon_client](#jcon_client)
-  * [jcon_thread](#jcon_thread)
   * [jcon_server](#jcon_server)
+  * [jcon_thread](#jcon_thread)
 * [Using the Library](#using-the-library)
   * [Example Program](#example-program)
   * [Compiling Programs with libJayC](#compiling-programs-with-libjayc)
@@ -207,6 +207,30 @@ connection. In case of a TCP connection, that would be IP address and port
 the client is connected to.   
 Example: `TCP:127.0.0.1:4443`
 
+### jcon_server
+_jcon\_server_ provides a unified interface, for different kinds of
+server systems.   
+Like _jcon\_client_ it can be implemented, to use many different
+communication types.
+
+#### Sessions
+`_session_init()` functions get defined by implementations and return
+a `jcon_server_t` pointer. Again, this will be the session pointer.
+
+To free a session, the `jcon_server_free()` function must be called
+with the session pointer as parameter.
+
+#### Client Connections
+_jcon\_server_ provides functions to check for available connections
+(`jcon_server_newConnection()`) and accept them and get a _jcon\_client_
+session in return (`jcon_server_acceptConnection()`).
+This client session is connected to the client and can be used to
+handle data transfer to the client.
+
+#### Getters
+_jcon\_server_ provides the same getters as _jcon\_client_,
+but uses the `jcon_server_` prefix.
+
 ### jcon_thread
 _jcon\_thread_ is a threaded jcon_client. The thread runs in a loop and
 checks for new data and for disconnects.
@@ -234,8 +258,6 @@ status.
 `jcon_thread_isRunning()` tells, if the thread is still running.   
 `jcon_thread_getConnectionType()` gives the connection type of the client.   
 `jcon_thread_getReferenceString()` gives the reference string of the client.
-
-### jcon_server
 
 ## Using The Library
 

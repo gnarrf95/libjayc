@@ -12,11 +12,11 @@
 #ifndef INCLUDE_JCON_CLIENT_DEV_H
 #define INCLUDE_JCON_CLIENT_DEV_H
 
+#include <jcon_client.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <jcon_client.h>
 
 /**
  * @brief Function to handle session reset calls.

@@ -27,11 +27,11 @@
 #ifndef INCLUDE_JLOG_SYSLOG_H
 #define INCLUDE_JLOG_SYSLOG_H
 
+#include <jlog.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <jlog.h>
 
 /*******************************************************************************
  * @brief Create jlog_syslog session object.

@@ -122,7 +122,7 @@ jcon_thread_t *jcon_thread_init
   if(jcon_thread_start(session) == false)
   {
     ERROR(session, "jcon_thread_start() failed. Destroying session.");
-    jcon_thread_free(session);
+    free(session);
     return NULL;
   }
 
@@ -139,10 +139,7 @@ void jcon_thread_free(jcon_thread_t *session)
     return;
   }
 
-  if(jcon_thread_isRunning(session))
-  {
-    jcon_thread_stop(session);
-  }
+  jcon_thread_stop(session);
 
   free(session);
 }
@@ -216,6 +213,20 @@ void *jcon_thread_run_function(void *session_ptr)
   
   while(run_loop)
   {
+    /* Check for new data */
+    jcon_thread_pthread_mutex_lock(session);
+    if(jcon_client_newData(session->runtime_data.client))
+    {
+      if(session->runtime_data.data_handler)
+      {
+        session->runtime_data.data_handler(
+          session->runtime_data.session_context,
+          session->runtime_data.client
+        );
+      }
+    }
+    jcon_thread_pthread_mutex_unlock(session);
+
     /* Check connection state */
     jcon_thread_pthread_mutex_lock(session);
     if(jcon_client_isConnected(session->runtime_data.client) == false)
@@ -227,20 +238,6 @@ void *jcon_thread_run_function(void *session_ptr)
           session->runtime_data.session_context,
           JCON_THREAD_CLOSETYPE_DISCONNECT,
           jcon_thread_getReferenceString(session)
-        );
-      }
-    }
-    jcon_thread_pthread_mutex_unlock(session);
-
-    /* Check for new data */
-    jcon_thread_pthread_mutex_lock(session);
-    if(jcon_client_newData(session->runtime_data.client))
-    {
-      if(session->runtime_data.data_handler)
-      {
-        session->runtime_data.data_handler(
-          session->runtime_data.session_context,
-          session->runtime_data.client
         );
       }
     }
@@ -362,17 +359,12 @@ void jcon_thread_stop(jcon_thread_t *session)
     return;
   }
 
-  if(session->runtime_data.run == false)
-  {
-    WARN(session, "Thread not running.");
-    return;
-  }
-
   jcon_thread_pthread_mutex_lock(session);
   session->runtime_data.run = false;
   jcon_thread_pthread_mutex_unlock(session);
 
   jcon_thread_pthread_join(session);
+  DEBUG(session, "Thread joined.");
   jcon_thread_pthread_mutex_destroy(session);
 }
 

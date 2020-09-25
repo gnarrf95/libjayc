@@ -17,6 +17,8 @@
 #ifndef INCLUDE_JUTIL_LINKEDLIST_H
 #define INCLUDE_JUTIL_LINKEDLIST_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,6 +77,15 @@ void *jutil_linkedlist_getData(jutil_linkedlist_t *node);
  * @return      @c NULL , if head was last node or error occured.
  */
 jutil_linkedlist_t *jutil_linkedlist_iterate(jutil_linkedlist_t *head);
+
+/**
+ * @brief Counts number of nodes in list.
+ * 
+ * @param list  List to count.
+ * 
+ * @return      Number of nodes in list.
+ */
+size_t jutil_linkedlist_size(jutil_linkedlist_t *list);
 
 /**
  * @brief Put new node at first position of list.

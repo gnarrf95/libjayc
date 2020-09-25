@@ -78,6 +78,26 @@ jutil_linkedlist_t *jutil_linkedlist_iterate(jutil_linkedlist_t *head)
 
 //------------------------------------------------------------------------------
 //
+size_t jutil_linkedlist_size(jutil_linkedlist_t *list)
+{
+  if(list == NULL)
+  {
+    return 0;
+  }
+
+  jutil_linkedlist_t *itr = list;
+  
+  size_t ret;
+  for(ret = 0; itr != NULL; ret++)
+  {
+    itr = jutil_linkedlist_iterate(itr);
+  }
+
+  return ret;
+}
+
+//------------------------------------------------------------------------------
+//
 jutil_linkedlist_t *jutil_linkedlist_push(jutil_linkedlist_t *list, void *data)
 {
   if(list == NULL)
@@ -131,6 +151,13 @@ jutil_linkedlist_t *jutil_linkedlist_removeNode(jutil_linkedlist_t *list, jutil_
   if(node == NULL)
   {
     return NULL;
+  }
+
+  if(list == node)
+  {
+    jutil_linkedlist_t *ret = list->next;
+    free(list);
+    return ret;
   }
 
   jutil_linkedlist_t *iterator = list;

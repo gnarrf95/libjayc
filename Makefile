@@ -7,11 +7,15 @@ CC = gcc -Wall -Werror -std=c11 -fPIC
 #Compiler and linker flags
 
 INC = -I inc/
-CFLAGS = `mysql_config --cflags`
-LIB_JANSSON = -ljansson
-LIB_PTHREAD = -lpthread
-LIB_MYSQL = `mysql_config --libs`
-LIB = $(LIB_PTHREAD)
+
+CF_MYSQL = `mysql_config --cflags`
+CFLAGS = $(INC)
+
+LDF_JANSSON = -ljansson
+LDF_PTHREAD = -lpthread
+LDF_MYSQL = `mysql_config --libs`
+
+LDFLAGS = $(LDF_PTHREAD)
 
 # ==============================================================================
 # Sources
@@ -35,9 +39,7 @@ TARGET_LIBJAYC = build/lib/libjayc.so
 # ==============================================================================
 # Install variables
 
-ifeq ($(PREFIX),)
-	PREFIX := /usr/local
-endif
+PREFIX ?= /usr/local
 
 HEADERS_INSTALLED = $(subst inc/,$(PREFIX)/include/,$(HEADERS))
 TARGET_LIBJAYC_INSTALLED = $(PREFIX)/lib/$(subst build/lib/,,$(TARGET_LIBJAYC))
@@ -55,7 +57,7 @@ all_libs: $(TARGET_LIBJAYC)
 	@echo "All libraries done."
 
 $(TARGET_LIBJAYC): $(OBJ)
-	$(CC) -shared -o $@ $(INC) $? $(LIB)
+	$(CC) -shared -o $@ $(CFLAGS) $? $(LDFLAGS)
 
 # ------------------------------------------------------------------------------
 # Compile Tests
@@ -86,7 +88,7 @@ uninstall_lib:
 	rm -f $(TARGET_LIBJAYC_INSTALLED)
 
 uninstall_inc:
-	for header in $(HEADERS_INSTALLED); do rm $$header; done
+	for header in $(HEADERS_INSTALLED); do rm -f $$header; done
 
 # ------------------------------------------------------------------------------
 # Make Documentation
@@ -111,7 +113,7 @@ doc_doxygen: Doxyfile
 # General Recipes
 
 build/objects/%.o: src/%.c build
-	$(CC) -c $< -o $@ $(INC) $(CFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 build:
 	mkdir -p build/objects

@@ -35,9 +35,7 @@ TARGET_LIBJAYC = build/lib/libjayc.so
 # ==============================================================================
 # Install variables
 
-ifeq ($(PREFIX),)
-	PREFIX := /usr/local
-endif
+PREFIX ?= /usr/local
 
 HEADERS_INSTALLED = $(subst inc/,$(PREFIX)/include/,$(HEADERS))
 TARGET_LIBJAYC_INSTALLED = $(PREFIX)/lib/$(subst build/lib/,,$(TARGET_LIBJAYC))

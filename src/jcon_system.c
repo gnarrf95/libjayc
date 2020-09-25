@@ -22,30 +22,79 @@
 
 #define JCON_SYSTEM_LOOPSLEEP_DEFAULT 100000000
 
-static void jcon_system_log(jcon_system_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
+//==============================================================================
+// Declare data structures.
+//==============================================================================
 
+typedef struct __jcon_system_connectionPair jcon_system_connection_t;
+
+struct __jcon_system_session
+{
+  jcon_server_t *server;
+  jutil_linkedlist_t *connections;
+
+  pthread_t control_thread;
+  pthread_mutex_t mutex;
+  long loop_sleep;
+  int control_run;
+
+  jcon_system_threadData_handler_t data_handler;
+  jcon_system_threadCreate_handler_t create_handler;
+  jcon_system_threadClose_handler_t close_handler;
+
+  jlog_t *logger;
+  void *session_context;
+};
+
+struct __jcon_system_connectionPair
+{
+  jcon_thread_t *thread;
+  jcon_client_t *client;
+};
+
+//==============================================================================
+// Declare internal and helper functions.
+//==============================================================================
+
+/* Functions for control thread. */
 static void *jcon_system_control_function(void *ctx);
-
 static void jcon_system_loop_sleep(jcon_system_t *session);
+static int jcon_system_control_start(jcon_system_t *session);
+static void jcon_system_control_stop(jcon_system_t *session);
 
+/* Functions for server control. */
+static int jcon_system_resetServer(jcon_system_t *session);
+// static void jcon_system_closeServer(jcon_system_t *session);
+
+/* Functions for server connections. */
+static void jcon_system_clearConnections(jcon_system_t *session);
+static int jcon_system_addConnection(jcon_system_t *session, jcon_client_t *client);
+static void jcon_system_freeConnection(jcon_system_t *session, jutil_linkedlist_t *connection_node);
+
+/* Handlers for jcon_thread. */
 static void jcon_system_connectionThread_create(void *ctx, int create_type, const char *reference_string);
 static void jcon_system_connectionThread_close(void *ctx, int close_type, const char *reference_string);
 
+/* Helper functions for pthread library. */
 static int jcon_system_pthread_init(jcon_system_t *session);
 static void jcon_system_pthread_join(jcon_system_t *session);
-
 static int jcon_system_pthread_mutex_init(jcon_system_t *session);
 static void jcon_system_pthread_mutex_destroy(jcon_system_t *session);
-
 static void jcon_system_pthread_mutex_lock(jcon_system_t *session);
 static void jcon_system_pthread_mutex_unlock(jcon_system_t *session);
 
+/* Log function and macros */
+static void jcon_system_log(jcon_system_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 #define DEBUG(session, fmt, ...) jcon_system_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define INFO(session, fmt, ...) jcon_system_log(session, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define WARN(session, fmt, ...) jcon_system_log(session, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define ERROR(session, fmt, ...) jcon_system_log(session, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define CRITICAL(session, fmt, ...) jcon_system_log(session, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define FATAL(session, fmt, ...) jcon_system_log(session, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+
+//==============================================================================
+// Implement interface functions.
+//==============================================================================
 
 //------------------------------------------------------------------------------
 //
@@ -81,6 +130,16 @@ jcon_system_t *jcon_system_init
   session->close_handler = close_handler;
   session->logger = logger;
   session->session_context = ctx;
+
+  if(jcon_system_isServerOpen(session) == false)
+  {
+    if(jcon_system_resetServer(session) == false)
+    {
+      ERROR(session, "jcon_system_resetServer() failed. Destroying session.");
+      free(session);
+      return NULL;
+    }
+  }
 
   if(jcon_system_control_start(session) == false)
   {
@@ -167,44 +226,6 @@ int jcon_system_isServerOpen(jcon_system_t *session)
 
 //------------------------------------------------------------------------------
 //
-int jcon_system_resetServer(jcon_system_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return false;
-  }
-
-  if(session->server == NULL)
-  {
-    ERROR(NULL, "Server is NULL.");
-    return false;
-  }
-
-  return jcon_server_reset(session->server);
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_system_closeServer(jcon_system_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return;
-  }
-
-  if(session->server == NULL)
-  {
-    ERROR(NULL, "Server is NULL.");
-    return;
-  }
-
-  jcon_server_close(session->server);
-}
-
-//------------------------------------------------------------------------------
-//
 int jcon_system_control_isRunning(jcon_system_t *session)
 {
   if(session == NULL)
@@ -214,6 +235,119 @@ int jcon_system_control_isRunning(jcon_system_t *session)
   }
 
   return session->control_run;
+}
+
+//------------------------------------------------------------------------------
+//
+size_t jcon_system_getConnectionNumber(jcon_system_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return 0;
+  }
+
+  return jutil_linkedlist_size(session->connections);
+}
+
+//==============================================================================
+// Implement functions for control thread.
+//==============================================================================
+
+//------------------------------------------------------------------------------
+//
+void *jcon_system_control_function(void *ctx)
+{
+  if(ctx == NULL)
+  {
+    CRITICAL(NULL, "Context is NULL.");
+    return NULL;
+  }
+
+  jcon_system_t *session = (jcon_system_t *)ctx;
+  int run_loop;
+
+  jcon_system_pthread_mutex_lock(session);
+  run_loop = session->control_run;
+  jcon_system_pthread_mutex_unlock(session);
+
+  while(run_loop)
+  {
+    /* Check for closed connections. */
+    jcon_system_pthread_mutex_lock(session);
+    jutil_linkedlist_t *itr = session->connections;
+    while(itr != NULL)
+    {
+      jcon_system_connection_t *connection;
+      if( (connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr)) )
+      {
+        if(jcon_thread_isRunning(connection->thread) == false)
+        {
+          jcon_system_freeConnection(session, itr);
+          break;
+        }
+        else
+        {
+          itr = jutil_linkedlist_iterate(itr);
+        }
+      }
+      else
+      {
+        session->connections = jutil_linkedlist_removeNode(session->connections, itr);
+        break;
+      }
+    }
+    jcon_system_pthread_mutex_unlock(session);
+
+    /* Check for new connections. */
+    jcon_system_pthread_mutex_lock(session);
+    if(jcon_server_newConnection(session->server))
+    {
+      jcon_client_t *new_client = jcon_server_acceptConnection(session->server);
+      if(new_client)
+      {
+        if(jcon_system_addConnection(session, new_client) == false)
+        {
+          ERROR(session, "jcon_system_addConnection() failed.");
+        }
+      }
+      else
+      {
+        ERROR(session, "jcon_server_acceptConnection() failed.");
+      }
+    }
+    jcon_system_pthread_mutex_unlock(session);
+
+    jcon_system_loop_sleep(session);
+
+    jcon_system_pthread_mutex_lock(session);
+    run_loop = session->control_run;
+    jcon_system_pthread_mutex_unlock(session);
+  }
+
+  DEBUG(session, "Control thread stopped.");
+  return NULL;
+}
+
+//------------------------------------------------------------------------------
+//
+void jcon_system_loop_sleep(jcon_system_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return;
+  }
+
+  struct timespec slp;
+  slp.tv_sec = 0;
+  slp.tv_nsec = session->loop_sleep;
+
+  int ret_sleep = nanosleep(&slp, NULL);
+  if(ret_sleep)
+  {
+    ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -278,18 +412,53 @@ void jcon_system_control_stop(jcon_system_t *session)
   jcon_system_pthread_mutex_destroy(session);
 }
 
+//==============================================================================
+// Implement functions for server control.
+//==============================================================================
+
 //------------------------------------------------------------------------------
 //
-size_t jcon_system_getConnectionNumber(jcon_system_t *session)
+int jcon_system_resetServer(jcon_system_t *session)
 {
   if(session == NULL)
   {
     ERROR(NULL, "Session is NULL.");
-    return 0;
+    return false;
   }
 
-  return jutil_linkedlist_size(session->connections);
+  if(session->server == NULL)
+  {
+    ERROR(NULL, "Server is NULL.");
+    return false;
+  }
+
+  return jcon_server_reset(session->server);
 }
+
+/*
+//------------------------------------------------------------------------------
+//
+void jcon_system_closeServer(jcon_system_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return;
+  }
+
+  if(session->server == NULL)
+  {
+    ERROR(NULL, "Server is NULL.");
+    return;
+  }
+
+  jcon_server_close(session->server);
+}
+*/
+
+//==============================================================================
+// Implement functions for server connections.
+//==============================================================================
 
 //------------------------------------------------------------------------------
 //
@@ -391,129 +560,9 @@ void jcon_system_freeConnection(jcon_system_t *session, jutil_linkedlist_t *conn
   session->connections = jutil_linkedlist_removeNode(session->connections, connection_node);
 }
 
-//------------------------------------------------------------------------------
-//
-void jcon_system_log(jcon_system_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
-{
-  va_list args;
-  char buf[2048];
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
-  if(session)
-  {
-    if(session->logger && session->server)
-    {
-      jlog_log_message_m(session->logger, log_type, file, function, line, "<%s> %s", jcon_system_getReferenceString(session), buf);
-    }
-    else
-    {
-      jlog_global_log_message_m(log_type, file, function, line, "<%s> %s", jcon_system_getReferenceString(session), buf);
-    }
-  }
-  else
-  {
-    jlog_global_log_message_m(log_type, file, function, line, buf);
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-void *jcon_system_control_function(void *ctx)
-{
-  if(ctx == NULL)
-  {
-    CRITICAL(NULL, "Context is NULL.");
-    return NULL;
-  }
-
-  jcon_system_t *session = (jcon_system_t *)ctx;
-  int run_loop;
-
-  jcon_system_pthread_mutex_lock(session);
-  run_loop = session->control_run;
-  jcon_system_pthread_mutex_unlock(session);
-
-  while(run_loop)
-  {
-    /* Check for closed connections. */
-    jcon_system_pthread_mutex_lock(session);
-    jutil_linkedlist_t *itr = session->connections;
-    while(itr != NULL)
-    {
-      jcon_system_connection_t *connection;
-      if( (connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr)) )
-      {
-        if(jcon_thread_isRunning(connection->thread) == false)
-        {
-          jcon_system_freeConnection(session, itr);
-          break;
-        }
-        else
-        {
-          itr = jutil_linkedlist_iterate(itr);
-        }
-      }
-      else
-      {
-        session->connections = jutil_linkedlist_removeNode(session->connections, itr);
-        break;
-      }
-    }
-    jcon_system_pthread_mutex_unlock(session);
-
-    /* Check for new connections. */
-    jcon_system_pthread_mutex_lock(session);
-    if(jcon_server_newConnection(session->server))
-    {
-      jcon_client_t *new_client = jcon_server_acceptConnection(session->server);
-      if(new_client)
-      {
-        if(jcon_system_addConnection(session, new_client) == false)
-        {
-          ERROR(session, "jcon_system_addConnection() failed.");
-        }
-      }
-      else
-      {
-        ERROR(session, "jcon_server_acceptConnection() failed.");
-      }
-    }
-    jcon_system_pthread_mutex_unlock(session);
-
-    jcon_system_loop_sleep(session);
-
-    jcon_system_pthread_mutex_lock(session);
-    run_loop = session->control_run;
-    jcon_system_pthread_mutex_unlock(session);
-  }
-
-  DEBUG(session, "Control thread stopped.");
-  return NULL;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_system_loop_sleep(jcon_system_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return;
-  }
-
-  struct timespec slp;
-  slp.tv_sec = 0;
-  slp.tv_nsec = session->loop_sleep;
-
-  int ret_sleep = nanosleep(&slp, NULL);
-  if(ret_sleep)
-  {
-    ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
-  }
-}
+//==============================================================================
+// Implement handlers for jcon_thread.
+//==============================================================================
 
 //------------------------------------------------------------------------------
 //
@@ -526,6 +575,10 @@ void jcon_system_connectionThread_create(void *ctx, int create_type, const char 
 void jcon_system_connectionThread_close(void *ctx, int close_type, const char *reference_string)
 {
 }
+
+//==============================================================================
+// Implement helper functions for pthread library.
+//==============================================================================
 
 //------------------------------------------------------------------------------
 //
@@ -755,5 +808,37 @@ void jcon_system_pthread_mutex_unlock(jcon_system_t *session)
         break;
       }
     }
+  }
+}
+
+//==============================================================================
+// Implement log function.
+//==============================================================================
+
+//------------------------------------------------------------------------------
+//
+void jcon_system_log(jcon_system_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
+{
+  va_list args;
+  char buf[2048];
+
+  va_start(args, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+
+  if(session)
+  {
+    if(session->logger && session->server)
+    {
+      jlog_log_message_m(session->logger, log_type, file, function, line, "<%s> %s", jcon_system_getReferenceString(session), buf);
+    }
+    else
+    {
+      jlog_global_log_message_m(log_type, file, function, line, "<%s> %s", jcon_system_getReferenceString(session), buf);
+    }
+  }
+  else
+  {
+    jlog_global_log_message_m(log_type, file, function, line, buf);
   }
 }

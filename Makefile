@@ -7,10 +7,14 @@ CC = gcc -Wall -Werror -std=c11 -fPIC
 #Compiler and linker flags
 
 INC = -I inc/
-CFLAGS = `mysql_config --cflags`
+
+CF_MYSQL = `mysql_config --cflags`
+CFLAGS = $(INC)
+
 LIB_JANSSON = -ljansson
 LIB_PTHREAD = -lpthread
 LIB_MYSQL = `mysql_config --libs`
+
 LIB = $(LIB_PTHREAD)
 
 # ==============================================================================
@@ -53,7 +57,7 @@ all_libs: $(TARGET_LIBJAYC)
 	@echo "All libraries done."
 
 $(TARGET_LIBJAYC): $(OBJ)
-	$(CC) -shared -o $@ $(INC) $? $(LIB)
+	$(CC) -shared -o $@ $(CFLAGS) $? $(LIB)
 
 # ------------------------------------------------------------------------------
 # Compile Tests
@@ -109,7 +113,7 @@ doc_doxygen: Doxyfile
 # General Recipes
 
 build/objects/%.o: src/%.c build
-	$(CC) -c $< -o $@ $(INC) $(CFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 build:
 	mkdir -p build/objects

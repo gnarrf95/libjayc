@@ -22,7 +22,6 @@ extern "C" {
 #endif
 
 typedef struct __jcon_system_session jcon_system_t;
-typedef struct __jcon_system_connectionPair jcon_system_connection_t;
 
 typedef void(*jcon_system_threadData_handler_t)(void *ctx, jcon_client_t *client);
 typedef void(*jcon_system_threadCreate_handler_t)(void *ctx, const char *ref_string);

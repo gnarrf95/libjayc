@@ -153,6 +153,13 @@ jutil_linkedlist_t *jutil_linkedlist_removeNode(jutil_linkedlist_t *list, jutil_
     return NULL;
   }
 
+  if(list == node)
+  {
+    jutil_linkedlist_t *ret = list->next;
+    free(list);
+    return ret;
+  }
+
   jutil_linkedlist_t *iterator = list;
   jutil_linkedlist_t *previous = NULL;
   while(iterator != node)

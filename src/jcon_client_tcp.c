@@ -282,6 +282,7 @@ jcon_client_t *jcon_client_tcp_session_clone(int file_descriptor, struct sockadd
 
   session->function_reset = &jcon_client_tcp_reset;
   session->function_close = &jcon_client_tcp_close;
+  session->function_getReferenceString = &jcon_client_tcp_getReferenceString;
   session->function_isConnected = &jcon_client_tcp_isConnected;
   session->function_newData = &jcon_client_tcp_newData;
   session->function_recvData = &jcon_client_tcp_recvData;
@@ -499,6 +500,12 @@ int jcon_client_tcp_newData(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
+  if(jcon_client_tcp_isConnected(ctx) == false)
+  {
+    DEBUG(ctx, "Session not connected.");
+    return false;
+  }
+
   struct pollfd poll_fds[1];
   poll_fds->fd = session_context->file_descriptor;
   poll_fds->events = POLLIN;
@@ -516,24 +523,29 @@ int jcon_client_tcp_newData(void *ctx)
     return false;
   }
 
+  int ret = true;
+
   if(poll_fds->revents & POLLERR)
   {
     DEBUG(ctx, "poll() recieved [POLLERR].");
     jcon_client_tcp_close(ctx);
-    return false;
+    ret = false;
   }
   if(poll_fds->revents & POLLNVAL)
   {
     DEBUG(ctx, "poll() recieved [POLLNVAL].");
-    return false;
+    ret = false;
   }
   if(poll_fds->revents & POLLIN)
   {
     DEBUG(ctx, "poll() recieved [POLLIN].");
-    return true;
+  }
+  if(poll_fds->revents & POLLHUP)
+  {
+    DEBUG(ctx, "poll() recieved [POLLHUP].");
   }
 
-  return false;
+  return ret;
 }
 
 //------------------------------------------------------------------------------

@@ -52,15 +52,17 @@ void *jutil_thread_pthread_handler(void *ctx)
   int run;
   int ret_loop;
   int ret_sleep;
-  jutil_thread_pmutex_lock(&session->mutex);
+  jutil_thread_pmutex_lock(session);
   run = session->run_signal;
   session->thread_state = JUTIL_THREAD_STATE_RUNNING;
-  jutil_thread_pmutex_unlock(&session->mutex);
+  jutil_thread_pmutex_unlock(session);
+
+  DEBUG(session, "Thread start ...");
 
   while(run)
   {
     /* Run loop function. */
-    ret_loop = session->loop_function(session->ctx, (void *)&session->mutex);
+    ret_loop = session->loop_function(session->ctx, session);
 
     /* Sleep. */
     ret_sleep = nanosleep(&sleep_time, NULL);
@@ -70,14 +72,14 @@ void *jutil_thread_pthread_handler(void *ctx)
     }
 
     /* Check, if thread should exit. */
-    jutil_thread_pmutex_lock(&session->mutex);
-    run = (session->run_signal && !ret_loop);
-    jutil_thread_pmutex_unlock(&session->mutex);
+    jutil_thread_pmutex_lock(session);
+    run = (session->run_signal && ret_loop);
+    jutil_thread_pmutex_unlock(session);
   }
 
-  jutil_thread_pmutex_lock(&session->mutex);
+  jutil_thread_pmutex_lock(session);
   session->thread_state = JUTIL_THREAD_STATE_FINISHED;
-  jutil_thread_pmutex_unlock(&session->mutex);
+  jutil_thread_pmutex_unlock(session);
 
   DEBUG(session, "Thread exit.");
 
@@ -90,9 +92,9 @@ void jutil_thread_manage(jutil_thread_t *session)
 {
   int state;
 
-  jutil_thread_pmutex_lock(&session->mutex);
+  jutil_thread_pmutex_lock(session);
   state = session->thread_state;
-  jutil_thread_pmutex_unlock(&session->mutex);
+  jutil_thread_pmutex_unlock(session);
 
   if(state == JUTIL_THREAD_STATE_FINISHED)
   {
@@ -158,7 +160,7 @@ void jutil_thread_free(jutil_thread_t *session)
 //
 int jutil_thread_start(jutil_thread_t *session)
 {
-  if(session)
+  if(session == NULL)
   {
     ERROR(NULL, "Session is NULL.");
     return false;
@@ -170,6 +172,7 @@ int jutil_thread_start(jutil_thread_t *session)
     return true;
   }
 
+  session->run_signal = true;
   if(jutil_thread_pthread_create(session) == false)
   {
     ERROR(session, "Thread could not be started.");
@@ -190,9 +193,9 @@ void jutil_thread_stop(jutil_thread_t * session)
   }
 
   int state;
-  jutil_thread_pmutex_lock(&session->mutex);
+  jutil_thread_pmutex_lock(session);
   state = session->thread_state;
-  jutil_thread_pmutex_unlock(&session->mutex);
+  jutil_thread_pmutex_unlock(session);
 
   if(state == JUTIL_THREAD_STATE_STOPPED)
   {
@@ -202,9 +205,9 @@ void jutil_thread_stop(jutil_thread_t * session)
 
   if(state == JUTIL_THREAD_STATE_INIT || state == JUTIL_THREAD_STATE_RUNNING)
   {
-    jutil_thread_pmutex_lock(&session->mutex);
+    jutil_thread_pmutex_lock(session);
     session->run_signal = false;
-    jutil_thread_pmutex_unlock(&session->mutex);
+    jutil_thread_pmutex_unlock(session);
   }
 
   jutil_thread_pthread_join(session);
@@ -213,35 +216,28 @@ void jutil_thread_stop(jutil_thread_t * session)
 
 //------------------------------------------------------------------------------
 //
-void *jutil_thread_getMutexPtr(jutil_thread_t *session)
+void jutil_thread_lockMutex(jutil_thread_t *session)
 {
-  return (void *)&session->mutex;
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return;
+  }
+
+  jutil_thread_pmutex_lock(session);
 }
 
 //------------------------------------------------------------------------------
 //
-void jutil_thread_lockMutex(void *mutex_ptr)
+void jutil_thread_unlockMutex(jutil_thread_t *session)
 {
-  if(mutex_ptr == NULL)
+  if(session == NULL)
   {
-    ERROR(NULL, "Mutex pointer is NULL.");
+    ERROR(NULL, "Session is NULL.");
     return;
   }
 
-  jutil_thread_pmutex_lock((pthread_mutex_t *)mutex_ptr);
-}
-
-//------------------------------------------------------------------------------
-//
-void jutil_thread_unlockMutex(void *mutex_ptr)
-{
-  if(mutex_ptr == NULL)
-  {
-    ERROR(NULL, "Mutex pointer is NULL.");
-    return;
-  }
-
-  jutil_thread_pmutex_unlock((pthread_mutex_t *)mutex_ptr);
+  jutil_thread_pmutex_unlock(session);
 }
 
 //------------------------------------------------------------------------------
@@ -255,9 +251,9 @@ int jutil_thread_isRunning(jutil_thread_t *session)
   }
 
   int state;
-  jutil_thread_pmutex_lock(&session->mutex);
+  jutil_thread_pmutex_lock(session);
   state = session->thread_state;
-  jutil_thread_pmutex_unlock(&session->mutex);
+  jutil_thread_pmutex_unlock(session);
 
   if(state == JUTIL_THREAD_STATE_STOPPED)
   {
@@ -435,9 +431,9 @@ void jutil_thread_pmutex_destroy(jutil_thread_t *session)
 
 //------------------------------------------------------------------------------
 //
-void jutil_thread_pmutex_lock(pthread_mutex_t *mutex)
+void jutil_thread_pmutex_lock(jutil_thread_t *session)
 {
-  int error = pthread_mutex_lock(mutex);
+  int error = pthread_mutex_lock(&session->mutex);
   if(error)
   {
     switch(error)
@@ -472,9 +468,9 @@ void jutil_thread_pmutex_lock(pthread_mutex_t *mutex)
 
 //------------------------------------------------------------------------------
 //
-void jutil_thread_pmutex_unlock(pthread_mutex_t *mutex)
+void jutil_thread_pmutex_unlock(jutil_thread_t *session)
 {
-  int error = pthread_mutex_unlock(mutex);
+  int error = pthread_mutex_unlock(&session->mutex);
   if(error)
   {
     switch(error)
@@ -520,22 +516,22 @@ void jutil_thread_log(jutil_thread_t *session, int log_type, const char *file, c
   if(session)
   {
     unsigned long id;
-    if(session->thread_state == JUTIL_THREAD_STATE_INIT || session->thread_state == JUTIL_THREAD_STATE_RUNNING)
+    if(session->thread_state == JUTIL_THREAD_STATE_STOPPED)
     {
-      id = session->thread;
+      id = 0;
     }
     else
     {
-      id = 0;
+      id = session->thread;
     }
 
     if(session->logger)
     {
-      jlog_log_message_m(session->logger, log_type, file, function, line, "<pthread:%d> %s", id, buf);
+      jlog_log_message_m(session->logger, log_type, file, function, line, "<pthread:%lu> %s", id, buf);
     }
     else
     {
-      jlog_global_log_message_m(log_type, file, function, line, "<pthread:%d> %s", id, buf);
+      jlog_global_log_message_m(log_type, file, function, line, "<pthread:%lu> %s", id, buf);
     }
   }
   else

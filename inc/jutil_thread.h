@@ -35,17 +35,17 @@ typedef struct __jutil_thread_session jutil_thread_t;
  * 
  * @param ctx Context used by implementation.
  * 
- * @return    @c 0 , if thread should continue.
- * @return    @c 1 , if thread should stop.
+ * @return    @c 1 , if thread should continue.
+ * @return    @c 0 , if thread should stop.
  */
-typedef int(*jutil_thread_loop_function_t)(void *ctx, void *mutex_ptr);
+typedef int(*jutil_thread_loop_function_t)(void *ctx, jutil_thread_t *thread_session);
 
 struct __jutil_thread_session
 {
   pthread_t thread;
   pthread_mutex_t mutex;
   jutil_thread_loop_function_t loop_function;
-  long loop_sleep;
+  long loop_sleep;                            /**< How long the loop will wait (in nanoseconds), before continuing. */
   jlog_t *logger;
 
   int thread_state;
@@ -64,10 +64,8 @@ void jutil_thread_free(jutil_thread_t *session);
 int jutil_thread_start(jutil_thread_t *session);
 void jutil_thread_stop(jutil_thread_t *session);
 
-void *jutil_thread_getMutexPtr(jutil_thread_t *session);
-
-void jutil_thread_lockMutex(void *mutex_ptr);
-void jutil_thread_unlockMutex(void *mutex_ptr);
+void jutil_thread_lockMutex(jutil_thread_t *session);
+void jutil_thread_unlockMutex(jutil_thread_t *session);
 
 int jutil_thread_isRunning(jutil_thread_t *session);
 
@@ -75,8 +73,8 @@ int jutil_thread_pthread_create(jutil_thread_t *session);
 void jutil_thread_pthread_join(jutil_thread_t *session);
 int jutil_thread_pmutex_init(jutil_thread_t *session);
 void jutil_thread_pmutex_destroy(jutil_thread_t *session);
-void jutil_thread_pmutex_lock(pthread_mutex_t *mutex);
-void jutil_thread_pmutex_unlock(pthread_mutex_t *mutex);
+void jutil_thread_pmutex_lock(jutil_thread_t *session);
+void jutil_thread_pmutex_unlock(jutil_thread_t *session);
 
 void jutil_thread_log(jutil_thread_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 

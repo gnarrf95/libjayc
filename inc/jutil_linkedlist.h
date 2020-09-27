@@ -119,10 +119,10 @@ void *jutil_linkedlist_pop(jutil_linkedlist_t **list);
  * @param list  List to edit.
  * @param node  Node to remove.
  * 
- * @return      @c true , if node was found and removed.
- * @return      @c false , if node not found or error occured.
+ * @return      Data of removed node.
+ * @return      @c NULL , if node not found or error occured.
  */
-int jutil_linkedlist_removeNode(jutil_linkedlist_t **list, jutil_linkedlist_t *node);
+void *jutil_linkedlist_removeNode(jutil_linkedlist_t **list, jutil_linkedlist_t *node);
 
 /**
  * @brief Add node at end of list.

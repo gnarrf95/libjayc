@@ -247,7 +247,7 @@ size_t jcon_system_getConnectionNumber(jcon_system_t *session)
     return 0;
   }
 
-  return jutil_linkedlist_size(session->connections);
+  return jutil_linkedlist_size(&session->connections);
 }
 
 //==============================================================================
@@ -276,10 +276,11 @@ void *jcon_system_control_function(void *ctx)
     /* Check for closed connections. */
     jcon_system_pthread_mutex_lock(session);
     jutil_linkedlist_t *itr = session->connections;
+    jcon_system_connection_t *connection;
     while(itr != NULL)
     {
-      jcon_system_connection_t *connection;
-      if( (connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr)) )
+      connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr);
+      if(connection)
       {
         if(jcon_thread_isRunning(connection->thread) == false)
         {
@@ -293,7 +294,7 @@ void *jcon_system_control_function(void *ctx)
       }
       else
       {
-        session->connections = jutil_linkedlist_removeNode(session->connections, itr);
+        jutil_linkedlist_removeNode(&session->connections, itr);
         break;
       }
     }
@@ -520,7 +521,7 @@ int jcon_system_addConnection(jcon_system_t *session, jcon_client_t *client)
     return false;
   }
 
-  session->connections = jutil_linkedlist_append(session->connections, (void *)new_connection);
+  jutil_linkedlist_append(&session->connections, (void *)new_connection);
 
   return true;
 }
@@ -557,7 +558,7 @@ void jcon_system_freeConnection(jcon_system_t *session, jutil_linkedlist_t *conn
     free(connection);
   }
 
-  session->connections = jutil_linkedlist_removeNode(session->connections, connection_node);
+  jutil_linkedlist_removeNode(&session->connections, connection_node);
 }
 
 //==============================================================================

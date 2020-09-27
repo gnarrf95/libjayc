@@ -26,7 +26,10 @@ extern "C" {
 /**
  * @brief Node object.
  * 
- * Holds data and pointer to next node.
+ * Holds data and pointer to next node.y
+ * 
+ * Used as double pointer, so list can
+ * be passed as argument and changed.
  */
 typedef struct __jutil_linkedlist jutil_linkedlist_t;
 
@@ -45,7 +48,7 @@ jutil_linkedlist_t *jutil_linkedlist_init();
  * 
  * @param list Head of linked list.
  */
-void jutil_linkedlist_free(jutil_linkedlist_t *list);
+void jutil_linkedlist_free(jutil_linkedlist_t **list);
 
 /**
  * @brief Create a node.
@@ -85,7 +88,7 @@ jutil_linkedlist_t *jutil_linkedlist_iterate(jutil_linkedlist_t *head);
  * 
  * @return      Number of nodes in list.
  */
-size_t jutil_linkedlist_size(jutil_linkedlist_t *list);
+size_t jutil_linkedlist_size(jutil_linkedlist_t **list);
 
 /**
  * @brief Put new node at first position of list.
@@ -93,20 +96,20 @@ size_t jutil_linkedlist_size(jutil_linkedlist_t *list);
  * @param list  List to edit.
  * @param data  Data pointer for new node.
  * 
- * @return      New head of list.
- * @return      @c NULL in case of error.
+ * @return      @c true , if successful.
+ * @return      @c false in case of error.
  */
-jutil_linkedlist_t *jutil_linkedlist_push(jutil_linkedlist_t *list, void *data);
+int jutil_linkedlist_push(jutil_linkedlist_t **list, void *data);
 
 /**
  * @brief Remove first node of list.
  * 
  * @param list  List to edit.
  * 
- * @return      New head of list.
- * @return      @c NULL , if list is now empty or error occured.
+ * @return      Data stored in first node.
+ * @return      @c NULL , if list is empty or error occured.
  */
-jutil_linkedlist_t *jutil_linkedlist_pop(jutil_linkedlist_t *list);
+void *jutil_linkedlist_pop(jutil_linkedlist_t **list);
 
 /**
  * @brief Iterates through list, until node is found and removes it.
@@ -116,10 +119,10 @@ jutil_linkedlist_t *jutil_linkedlist_pop(jutil_linkedlist_t *list);
  * @param list  List to edit.
  * @param node  Node to remove.
  * 
- * @return      Edited list.
- * @return      @c NULL , if list is now empty or error occured.
+ * @return      @c true , if node was found and removed.
+ * @return      @c false , if node not found or error occured.
  */
-jutil_linkedlist_t *jutil_linkedlist_removeNode(jutil_linkedlist_t *list, jutil_linkedlist_t *node);
+int jutil_linkedlist_removeNode(jutil_linkedlist_t **list, jutil_linkedlist_t *node);
 
 /**
  * @brief Add node at end of list.
@@ -127,20 +130,20 @@ jutil_linkedlist_t *jutil_linkedlist_removeNode(jutil_linkedlist_t *list, jutil_
  * @param list  List to edit.
  * @param data  Data for new node.
  * 
- * @return      Edited list.
- * @return      @c NULL in case of error.
+ * @return      @c true , if successful.
+ * @return      @c false in case of error.
  */
-jutil_linkedlist_t *jutil_linkedlist_append(jutil_linkedlist_t *list, void *data);
+int jutil_linkedlist_append(jutil_linkedlist_t **list, void *data);
 
 /**
  * @brief Remove last node of list.
  * 
  * @param list  List to edit.
  * 
- * @return      Edited list.
- * @return      @c NULL , if list is now empty or error occured.
+ * @return      Data of last node.
+ * @return      @c NULL , if list is empty or error occured.
  */
-jutil_linkedlist_t *jutil_linkedlist_remove(jutil_linkedlist_t *list);
+void *jutil_linkedlist_remove(jutil_linkedlist_t **list);
 
 
 #ifdef __cplusplus

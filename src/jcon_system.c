@@ -61,6 +61,8 @@ static int jcon_system_resetServer(jcon_system_t *session);
 // static void jcon_system_closeServer(jcon_system_t *session);
 
 /* Functions for server connections. */
+static void jcon_system_checkForConnections(jcon_system_t *session);
+static void jcon_system_cleanupConnections(jcon_system_t *session);
 static void jcon_system_clearConnections(jcon_system_t *session);
 static int jcon_system_addConnection(jcon_system_t *session, jcon_client_t *client);
 static void jcon_system_freeConnection(jcon_system_t *session, jutil_linkedlist_t *connection_node);
@@ -247,7 +249,13 @@ size_t jcon_system_getConnectionNumber(jcon_system_t *session)
     return 0;
   }
 
-  return jutil_linkedlist_size(&session->connections);
+  size_t ret;
+
+  jutil_thread_lockMutex(session->control_thread);
+  ret = jutil_linkedlist_size(&session->connections);
+  jutil_thread_unlockMutex(session->control_thread);
+
+  return ret;
 }
 
 //==============================================================================
@@ -275,48 +283,12 @@ int jcon_system_control_function(void *ctx, jutil_thread_t *thread_handler)
 
   /* Check for closed connections. */
   jutil_thread_lockMutex(thread_handler);
-  jutil_linkedlist_t *itr = session->connections;
-  jcon_system_connection_t *connection;
-  while(itr != NULL)
-  {
-    connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr);
-    if(connection)
-    {
-      if(jcon_thread_isRunning(connection->thread) == false)
-      {
-        jcon_system_freeConnection(session, itr);
-        break;
-      }
-      else
-      {
-        itr = jutil_linkedlist_iterate(itr);
-      }
-    }
-    else
-    {
-      jutil_linkedlist_removeNode(&session->connections, itr);
-      break;
-    }
-  }
+  jcon_system_checkForConnections(session);
   jutil_thread_unlockMutex(thread_handler);
 
   /* Check for new connections. */
   jutil_thread_lockMutex(thread_handler);
-  if(jcon_server_newConnection(session->server))
-  {
-    jcon_client_t *new_client = jcon_server_acceptConnection(session->server);
-    if(new_client)
-    {
-      if(jcon_system_addConnection(session, new_client) == false)
-      {
-        ERROR(session, "jcon_system_addConnection() failed.");
-      }
-    }
-    else
-    {
-      ERROR(session, "jcon_server_acceptConnection() failed.");
-    }
-  }
+  jcon_system_cleanupConnections(session);
   jutil_thread_unlockMutex(thread_handler);
 
   return ret;
@@ -342,7 +314,17 @@ int jcon_system_resetServer(jcon_system_t *session)
     return false;
   }
 
-  return jcon_server_reset(session->server);
+  int ret;
+  jutil_thread_lockMutex(session->control_thread);
+  ret = jcon_server_reset(session->server);
+  jutil_thread_unlockMutex(session->control_thread);
+
+  if(ret == false)
+  {
+    ERROR(session, "jcon_server_reset() failed.");
+  }
+
+  return ret;
 }
 
 /*
@@ -369,6 +351,69 @@ void jcon_system_closeServer(jcon_system_t *session)
 //==============================================================================
 // Implement functions for server connections.
 //==============================================================================
+
+//------------------------------------------------------------------------------
+//
+void jcon_system_checkForConnections(jcon_system_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return;
+  }
+
+  jutil_linkedlist_t *itr = session->connections;
+  jcon_system_connection_t *connection;
+
+  while(itr != NULL)
+  {
+    connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr);
+    if(connection)
+    {
+      if(jcon_thread_isRunning(connection->thread) == false)
+      {
+        jcon_system_freeConnection(session, itr);
+        break;
+      }
+      else
+      {
+        itr = jutil_linkedlist_iterate(itr);
+      }
+    }
+    else
+    {
+      jutil_linkedlist_removeNode(&session->connections, itr);
+      break;
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+//
+void jcon_system_cleanupConnections(jcon_system_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return;
+  }
+
+  if(jcon_server_newConnection(session->server))
+  {
+    jcon_client_t *new_client = jcon_server_acceptConnection(session->server);
+    if(new_client)
+    {
+      if(jcon_system_addConnection(session, new_client) == false)
+      {
+        ERROR(session, "jcon_system_addConnection() failed.");
+      }
+    }
+    else
+    {
+      ERROR(session, "jcon_server_acceptConnection() failed.");
+    }
+  }
+}
 
 //------------------------------------------------------------------------------
 //
@@ -430,7 +475,12 @@ int jcon_system_addConnection(jcon_system_t *session, jcon_client_t *client)
     return false;
   }
 
-  jutil_linkedlist_append(&session->connections, (void *)new_connection);
+  if(jutil_linkedlist_append(&session->connections, (void *)new_connection) == false)
+  {
+    ERROR(session, "jutil_linkedlist_append() failed.");
+    jcon_thread_free(new_connection->thread);
+    return false;
+  }
 
   return true;
 }
@@ -467,7 +517,10 @@ void jcon_system_freeConnection(jcon_system_t *session, jutil_linkedlist_t *conn
     free(connection);
   }
 
-  jutil_linkedlist_removeNode(&session->connections, connection_node);
+  if(jutil_linkedlist_removeNode(&session->connections, connection_node) == NULL)
+  {
+    ERROR(session, "jutil_linkedlist_removeNode() failed.");
+  }
 }
 
 //==============================================================================

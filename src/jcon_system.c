@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
+#include <jutil_thread.h>
 
 #define JCON_SYSTEM_LOOPSLEEP_DEFAULT 100000000
 
@@ -32,11 +33,7 @@ struct __jcon_system_session
 {
   jcon_server_t *server;
   jutil_linkedlist_t *connections;
-
-  pthread_t control_thread;
-  pthread_mutex_t mutex;
-  long loop_sleep;
-  int control_run;
+  jutil_thread_t *control_thread;
 
   jcon_system_threadData_handler_t data_handler;
   jcon_system_threadCreate_handler_t create_handler;
@@ -57,10 +54,7 @@ struct __jcon_system_connectionPair
 //==============================================================================
 
 /* Functions for control thread. */
-static void *jcon_system_control_function(void *ctx);
-static void jcon_system_loop_sleep(jcon_system_t *session);
-static int jcon_system_control_start(jcon_system_t *session);
-static void jcon_system_control_stop(jcon_system_t *session);
+static int jcon_system_control_function(void *ctx, jutil_thread_t *thread_handler);
 
 /* Functions for server control. */
 static int jcon_system_resetServer(jcon_system_t *session);
@@ -74,14 +68,6 @@ static void jcon_system_freeConnection(jcon_system_t *session, jutil_linkedlist_
 /* Handlers for jcon_thread. */
 static void jcon_system_connectionThread_create(void *ctx, int create_type, const char *reference_string);
 static void jcon_system_connectionThread_close(void *ctx, int close_type, const char *reference_string);
-
-/* Helper functions for pthread library. */
-static int jcon_system_pthread_init(jcon_system_t *session);
-static void jcon_system_pthread_join(jcon_system_t *session);
-static int jcon_system_pthread_mutex_init(jcon_system_t *session);
-static void jcon_system_pthread_mutex_destroy(jcon_system_t *session);
-static void jcon_system_pthread_mutex_lock(jcon_system_t *session);
-static void jcon_system_pthread_mutex_unlock(jcon_system_t *session);
 
 /* Log function and macros */
 static void jcon_system_log(jcon_system_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
@@ -123,27 +109,41 @@ jcon_system_t *jcon_system_init
 
   session->server = server;
   session->connections = NULL;
-  session->loop_sleep = JCON_SYSTEM_LOOPSLEEP_DEFAULT;
-  session->control_run = false;
   session->data_handler = data_handler;
   session->create_handler = create_handler;
   session->close_handler = close_handler;
   session->logger = logger;
   session->session_context = ctx;
 
+  session->control_thread = jutil_thread_init
+  (
+    jcon_system_control_function,
+    logger,
+    JCON_SYSTEM_LOOPSLEEP_DEFAULT,
+    session
+  );
+  if(session->control_thread == NULL)
+  {
+    ERROR(session, "jutil_thread_init() failed. Destroying session.");
+    free(session);
+    return NULL;
+  }
+
   if(jcon_system_isServerOpen(session) == false)
   {
     if(jcon_system_resetServer(session) == false)
     {
       ERROR(session, "jcon_system_resetServer() failed. Destroying session.");
+      jutil_thread_free(session->control_thread);
       free(session);
       return NULL;
     }
   }
 
-  if(jcon_system_control_start(session) == false)
+  if(jutil_thread_start(session->control_thread) == false)
   {
-    ERROR(session, "jcon_system_control_start() failed. Destroying session.");
+    ERROR(session, "jutil_thread_start() failed. Destroying session.");
+    jutil_thread_free(session->control_thread);
     free(session);
     return NULL;
   }
@@ -161,7 +161,7 @@ void jcon_system_free(jcon_system_t *session)
     return;
   }
 
-  jcon_system_control_stop(session);
+  jutil_thread_free(session->control_thread);
   jcon_system_clearConnections(session);
 
   free(session);
@@ -234,7 +234,7 @@ int jcon_system_control_isRunning(jcon_system_t *session)
     return false;
   }
 
-  return session->control_run;
+  return jutil_thread_isRunning(session->control_thread);
 }
 
 //------------------------------------------------------------------------------
@@ -256,161 +256,70 @@ size_t jcon_system_getConnectionNumber(jcon_system_t *session)
 
 //------------------------------------------------------------------------------
 //
-void *jcon_system_control_function(void *ctx)
+int jcon_system_control_function(void *ctx, jutil_thread_t *thread_handler)
 {
   if(ctx == NULL)
   {
-    CRITICAL(NULL, "Context is NULL.");
-    return NULL;
+    ERROR(NULL, "Context is NULL.");
+    return false;
+  }
+
+  if(thread_handler == NULL)
+  {
+    ERROR(NULL, "thread_handler is NULL.");
+    return false;
   }
 
   jcon_system_t *session = (jcon_system_t *)ctx;
-  int run_loop;
+  int ret = true;
 
-  jcon_system_pthread_mutex_lock(session);
-  run_loop = session->control_run;
-  jcon_system_pthread_mutex_unlock(session);
-
-  while(run_loop)
+  /* Check for closed connections. */
+  jutil_thread_lockMutex(thread_handler);
+  jutil_linkedlist_t *itr = session->connections;
+  jcon_system_connection_t *connection;
+  while(itr != NULL)
   {
-    /* Check for closed connections. */
-    jcon_system_pthread_mutex_lock(session);
-    jutil_linkedlist_t *itr = session->connections;
-    jcon_system_connection_t *connection;
-    while(itr != NULL)
+    connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr);
+    if(connection)
     {
-      connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr);
-      if(connection)
+      if(jcon_thread_isRunning(connection->thread) == false)
       {
-        if(jcon_thread_isRunning(connection->thread) == false)
-        {
-          jcon_system_freeConnection(session, itr);
-          break;
-        }
-        else
-        {
-          itr = jutil_linkedlist_iterate(itr);
-        }
-      }
-      else
-      {
-        jutil_linkedlist_removeNode(&session->connections, itr);
+        jcon_system_freeConnection(session, itr);
         break;
       }
-    }
-    jcon_system_pthread_mutex_unlock(session);
-
-    /* Check for new connections. */
-    jcon_system_pthread_mutex_lock(session);
-    if(jcon_server_newConnection(session->server))
-    {
-      jcon_client_t *new_client = jcon_server_acceptConnection(session->server);
-      if(new_client)
-      {
-        if(jcon_system_addConnection(session, new_client) == false)
-        {
-          ERROR(session, "jcon_system_addConnection() failed.");
-        }
-      }
       else
       {
-        ERROR(session, "jcon_server_acceptConnection() failed.");
+        itr = jutil_linkedlist_iterate(itr);
       }
     }
-    jcon_system_pthread_mutex_unlock(session);
-
-    jcon_system_loop_sleep(session);
-
-    jcon_system_pthread_mutex_lock(session);
-    run_loop = session->control_run;
-    jcon_system_pthread_mutex_unlock(session);
+    else
+    {
+      jutil_linkedlist_removeNode(&session->connections, itr);
+      break;
+    }
   }
+  jutil_thread_unlockMutex(thread_handler);
 
-  DEBUG(session, "Control thread stopped.");
-  return NULL;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_system_loop_sleep(jcon_system_t *session)
-{
-  if(session == NULL)
+  /* Check for new connections. */
+  jutil_thread_lockMutex(thread_handler);
+  if(jcon_server_newConnection(session->server))
   {
-    ERROR(NULL, "Session is NULL.");
-    return;
+    jcon_client_t *new_client = jcon_server_acceptConnection(session->server);
+    if(new_client)
+    {
+      if(jcon_system_addConnection(session, new_client) == false)
+      {
+        ERROR(session, "jcon_system_addConnection() failed.");
+      }
+    }
+    else
+    {
+      ERROR(session, "jcon_server_acceptConnection() failed.");
+    }
   }
+  jutil_thread_unlockMutex(thread_handler);
 
-  struct timespec slp;
-  slp.tv_sec = 0;
-  slp.tv_nsec = session->loop_sleep;
-
-  int ret_sleep = nanosleep(&slp, NULL);
-  if(ret_sleep)
-  {
-    ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-int jcon_system_control_start(jcon_system_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL");
-    return false;
-  }
-
-  if(session->control_run)
-  {
-    WARN(session, "Control thread is already running.");
-    return true;
-  }
-
-  if(jcon_system_pthread_mutex_init(session) == false)
-  {
-    ERROR(session, "pthread_mutex could not be initialized.");
-    return false;
-  }
-
-  jcon_system_pthread_mutex_lock(session);
-  if(jcon_system_pthread_init(session) == false)
-  {
-    ERROR(session, "pthread could not be initialized.");
-    jcon_system_pthread_mutex_unlock(session);
-    jcon_system_pthread_mutex_destroy(session);
-    return false;
-  }
-
-  session->control_run = true;
-  if(session->create_handler)
-  {
-    session->create_handler(
-      session->session_context,
-      jcon_system_getReferenceString(session)
-    );
-  }
-  jcon_system_pthread_mutex_unlock(session);
-
-  return true;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_system_control_stop(jcon_system_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return;
-  }
-
-  jcon_system_pthread_mutex_lock(session);
-  session->control_run = false;
-  jcon_system_pthread_mutex_unlock(session);
-
-  jcon_system_pthread_join(session);
-  jcon_system_pthread_mutex_destroy(session);
+  return ret;
 }
 
 //==============================================================================
@@ -575,241 +484,6 @@ void jcon_system_connectionThread_create(void *ctx, int create_type, const char 
 //
 void jcon_system_connectionThread_close(void *ctx, int close_type, const char *reference_string)
 {
-}
-
-//==============================================================================
-// Implement helper functions for pthread library.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-//
-int jcon_system_pthread_init(jcon_system_t *session)
-{
-  int error = pthread_create(&session->control_thread, NULL, &jcon_system_control_function, session);
-  if(error)
-  {
-    switch(error)
-    {
-      case EAGAIN:
-      {
-        CRITICAL(session, "pthread_create() failed [%d : %s]. Resource limit.", error, strerror(error));
-        break;
-      }
-
-      case EINVAL:
-      {
-        ERROR(session, "pthread_create() failed [%d : %s]. Invalid attributes.", error, strerror(error));
-        break;
-      }
-
-      case EPERM:
-      {
-        ERROR(session, "pthread_create() failed [%d : %s]. Missing permission.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_create() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-
-    return false;
-  }
-
-  return true;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_system_pthread_join(jcon_system_t *session)
-{
-  int error = pthread_join(session->control_thread, NULL);
-  if(error)
-  {
-    switch(error)
-    {
-      case EDEADLK:
-      {
-        ERROR(session, "pthread_join() failed [%d : %s] Deadlock detected..", error, strerror(error));
-        break;
-      }
-
-      case EINVAL:
-      {
-        ERROR(session, "pthread_join() failed [%d : %s] Thread not joinable.", error, strerror(error));
-        break;
-      }
-
-      case ESRCH:
-      {
-        ERROR(session, "pthread_join() failed [%d : %s] Invalid thread-ID.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_join() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-int jcon_system_pthread_mutex_init(jcon_system_t *session)
-{
-  int error = pthread_mutex_init(&session->mutex, NULL);
-  if(error)
-  {
-    switch(error)
-    {
-      case EAGAIN:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s]. Missing resources.", error, strerror(error));
-        break;
-      }
-
-      case ENOMEM:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s]. Insufficient memory.", error, strerror(error));
-        break;
-      }
-
-      case EPERM:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s]. Missing privilege.", error, strerror(error));
-        break;
-      }
-
-      case EBUSY:
-      {
-        WARN(session, "pthread_mutex_init() failed [%d : %s]. Mutex already initialized.", error, strerror(error));
-        return true;
-        break;
-      }
-
-      case EINVAL:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s]. Invalid attributes.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-
-    return false;
-  }
-
-  return true;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_system_pthread_mutex_destroy(jcon_system_t *session)
-{
-  int error = pthread_mutex_destroy(&session->mutex);
-  if(error)
-  {
-    switch(error)
-    {
-      case EBUSY:
-      {
-        WARN(session, "pthread_mutex_destroy() failed [%d : %s]. Mutex is locked.", error, strerror(error));
-        break;
-      }
-
-      case EINVAL:
-      {
-        ERROR(session, "pthread_mutex_destroy() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_mutex_destroy() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_system_pthread_mutex_lock(jcon_system_t *session)
-{
-  int error = pthread_mutex_lock(&session->mutex);
-  if(error)
-  {
-    switch(error)
-    {
-      case EINVAL:
-      {
-        ERROR(session, "pthread_mutex_lock() failed [%d : %s]. Invalid priority.", error, strerror(error));
-        break;
-      }
-
-      case EAGAIN:
-      {
-        ERROR(session, "pthread_mutex_lock() failed [%d : %s]. Max number of recursive locks.", error, strerror(error));
-        break;
-      }
-
-      case EDEADLK:
-      {
-        ERROR(session, "pthread_mutex_lock() failed [%d : %s]. Current thread already owns mutex.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_mutex_lock() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_system_pthread_mutex_unlock(jcon_system_t *session)
-{
-  int error = pthread_mutex_unlock(&session->mutex);
-  if(error)
-  {
-    switch(error)
-    {
-      case EINVAL:
-      {
-        ERROR(session, "pthread_mutex_unlock() failed [%d : %s]. Invalid mutex.", error, strerror(error));
-        break;
-      }
-
-      case EAGAIN:
-      {
-        ERROR(session, "pthread_mutex_unlock() failed [%d : %s]. Max number of recursive locks.", error, strerror(error));
-        break;
-      }
-
-      case EPERM:
-      {
-        ERROR(session, "pthread_mutex_unlock() failed [%d : %s]. Current thread does not own the mutex.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_mutex_unlock() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-  }
 }
 
 //==============================================================================

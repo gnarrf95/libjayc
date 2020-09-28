@@ -13,6 +13,7 @@
 #define INCLUDE_JCON_CLIENT_TCP_H
 
 #include <jcon_client.h>
+#include <jcon_tcp.h>
 #include <jlog.h>
 #include <netinet/in.h>
 
@@ -48,6 +49,8 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
  * @return                @c NULL , if an error occured.
  */
 jcon_client_t *jcon_client_tcp_session_clone(int file_descriptor, struct sockaddr_in socket_address, jlog_t *logger);
+
+jcon_client_t *jcon_client_tcp_session_tcpClone(jcon_tcp_t *tcp_session, jlog_t *logger);
 
 #ifdef __cplusplus
 }

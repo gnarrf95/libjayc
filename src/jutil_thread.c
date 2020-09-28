@@ -54,8 +54,6 @@ void *jutil_thread_pthread_handler(void *ctx)
   sleep_time.tv_nsec = session->loop_sleep;
 
   int run;
-  int ret_loop;
-  int ret_sleep;
   jutil_thread_pmutex_lock(session);
   run = session->run_signal;
   session->thread_state = JUTIL_THREAD_STATE_RUNNING;
@@ -66,11 +64,10 @@ void *jutil_thread_pthread_handler(void *ctx)
   while(run)
   {
     /* Run loop function. */
-    ret_loop = session->loop_function(session->ctx, session);
+    int ret_loop = session->loop_function(session->ctx, session);
 
     /* Sleep. */
-    ret_sleep = nanosleep(&sleep_time, NULL);
-    if(ret_sleep)
+    if(nanosleep(&sleep_time, NULL))
     {
       ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
     }
@@ -377,9 +374,8 @@ int jutil_thread_pmutex_init(jutil_thread_t *session)
 
       case EBUSY:
       {
-        WARN(session, "pthread_mutex_init() failed [%d : %s]. Mutex already initialized.", error, strerror(error));
+        DEBUG(session, "pthread_mutex_init() failed [%d : %s]. Mutex already initialized.", error, strerror(error));
         return true;
-        break;
       }
 
       case EINVAL:

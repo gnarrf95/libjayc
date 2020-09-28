@@ -368,11 +368,10 @@ void jcon_system_checkForConnections(jcon_system_t *session)
   }
 
   jutil_linkedlist_t *itr = session->connections;
-  jcon_system_connection_t *connection;
 
   while(itr != NULL)
   {
-    connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr);
+    jcon_system_connection_t *connection = (jcon_system_connection_t *)jutil_linkedlist_getData(itr);
     if(connection)
     {
       if(jcon_thread_isRunning(connection->thread) == false)

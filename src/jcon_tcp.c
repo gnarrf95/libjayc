@@ -137,7 +137,7 @@ jcon_tcp_t *jcon_tcp_clone(int fd, struct sockaddr_in socket_address, jlog_t *lo
   session->file_descriptor = fd;
   session->socket_address = socket_address;
   session->logger = logger;
-  session->connection_type = JCON_TCP_CONNECTIONTYPE_NOTDEF;
+  session->connection_type = JCON_TCP_CONNECTIONTYPE_CLIENT;
 
   session->referenceString = jcon_tcp_createReferenceString(session->socket_address);
   if(session->referenceString == NULL)

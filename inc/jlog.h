@@ -44,20 +44,47 @@ extern "C" {
  */
 typedef struct __jlog_session jlog_t;
 
+
+
 //==============================================================================
 // Define log types.
-//==============================================================================
+//
 
-#define JLOG_LOGTYPE_DEBUG 0    /**< Marks debug messages. */
-#define JLOG_LOGTYPE_INFO 1     /**< Marks info messages. */
-#define JLOG_LOGTYPE_WARN 2     /**< Marks warning messages. */
-#define JLOG_LOGTYPE_ERROR 3    /**< Marks error messages. */
-#define JLOG_LOGTYPE_CRITICAL 4 /**< Marks critical messages. */
-#define JLOG_LOGTYPE_FATAL 5    /**< Marks fatal messages. */
+/**
+ * @brief Marks debug messages.
+ */
+#define JLOG_LOGTYPE_DEBUG 0
+
+/**
+ * @brief Marks info messages.
+ */
+#define JLOG_LOGTYPE_INFO 1
+
+/**
+ * @brief Marks warning messages.
+ */
+#define JLOG_LOGTYPE_WARN 2
+
+/**
+ * @brief Marks error messages.
+ */
+#define JLOG_LOGTYPE_ERROR 3
+
+/**
+ * @brief Marks critical messages.
+ */
+#define JLOG_LOGTYPE_CRITICAL 4
+
+/**
+ * @brief Marks fatal messages.
+ */
+#define JLOG_LOGTYPE_FATAL 5
+
+
 
 //==============================================================================
-// Define functions.
-//==============================================================================
+// Declare functions.
+//
 
 /**
  * @brief Creates quiet session, that doesn't log.
@@ -92,8 +119,7 @@ void jlog_session_free(jlog_t *session);
  * @param log_type  Log type of message (debug, info, warning, error).
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_log_message(jlog_t *session, int log_type,
-                      const char *fmt, ...);
+void jlog_log_message(jlog_t *session, int log_type, const char *fmt, ...);
 
 /**
  * @brief Logs message with session, including source code info.
@@ -114,9 +140,7 @@ void jlog_log_message(jlog_t *session, int log_type,
  * @param line      Line number on which log was called.
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_log_message_m(jlog_t *session, int log_type,
-                        const char *file, const char *function, int line,
-                        const char *fmt, ...);
+void jlog_log_message_m(jlog_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
 /**
  * @brief Set global session variable.
@@ -159,13 +183,13 @@ void jlog_global_log_message(int log_type, const char *fmt, ...);
  * @param line      Line number on which log was called.
  * @param fmt       Format string used for stdarg.h .
  */
-void jlog_global_log_message_m(int log_type, const char *file,
-                               const char *function, int line,
-                               const char *fmt, ...);
+void jlog_global_log_message_m(int log_type, const char *file, const char *function, int line, const char *fmt, ...);
+
+
 
 //==============================================================================
 // Define global macros.
-//==============================================================================
+//
 
 /**
  * @brief Sends global debug log with current code info.
@@ -175,8 +199,7 @@ void jlog_global_log_message_m(int log_type, const char *file,
  *
  * @param fmt Format string used for stdarg.h .
  */
-#define JLOG_DEBUG(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_DEBUG, \
-                             __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define JLOG_DEBUG(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Sends global info log with current code info.
@@ -186,8 +209,7 @@ void jlog_global_log_message_m(int log_type, const char *file,
  *
  * @param fmt Format string used for stdarg.h .
  */
-#define JLOG_INFO(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_INFO, \
-                            __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define JLOG_INFO(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Sends global warning log with current code info.
@@ -197,8 +219,7 @@ void jlog_global_log_message_m(int log_type, const char *file,
  *
  * @param fmt Format string used for stdarg.h .
  */
-#define JLOG_WARN(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_WARN, \
-                            __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define JLOG_WARN(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Sends global error log with current code info.
@@ -208,8 +229,7 @@ void jlog_global_log_message_m(int log_type, const char *file,
  *
  * @param fmt Format string used for stdarg.h .
  */
-#define JLOG_ERROR(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_ERROR, \
-                             __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define JLOG_ERROR(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Sends global critical log with current code info.
@@ -219,8 +239,7 @@ void jlog_global_log_message_m(int log_type, const char *file,
  *
  * @param fmt Format string used for stdarg.h .
  */
-#define JLOG_CRITICAL(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_CRITICAL, \
-                             __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define JLOG_CRITICAL(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Sends global fatal log with current code info.
@@ -230,11 +249,10 @@ void jlog_global_log_message_m(int log_type, const char *file,
  *
  * @param fmt Format string used for stdarg.h .
  */
-#define JLOG_FATAL(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_FATAL, \
-                             __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define JLOG_FATAL(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 #ifdef __cpluslpus
-} /* extern "C" */
+}
 #endif
 
 #endif /* INCLUDE_JLOG_H */

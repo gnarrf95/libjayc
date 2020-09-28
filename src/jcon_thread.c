@@ -9,79 +9,100 @@
  * 
  */
 
-#define _POSIX_C_SOURCE 199309L /* needed for nanosleep() */
-
 #include <jcon_thread.h>
-#include <pthread.h>
+#include <jutil_thread.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <time.h>
 
-/**
- * @brief Holds data necessary for jcon_thread runtime.
- */
-typedef struct __jcon_thread_runtime_data jcon_thread_runtime_data_t;
+//==============================================================================
+// Define constants and defaults.
+//
 
 #define JCON_THREAD_LOOPSLEEP_DEFAULT 100000000
 
-struct __jcon_thread_runtime_data
-{
-  jcon_client_t *client;
-  pthread_mutex_t mutex;
-  long loop_sleep;                          /**< How long the loop will wait (in nanoseconds), before continuing. */
-  int run;
 
-  jcon_thread_data_handler_t data_handler;
-  jcon_thread_create_handler_t create_handler;
-  jcon_thread_close_handler_t close_handler;
 
-  jlog_t *logger;
-  void *session_context;
-};
+//==============================================================================
+// Declare internal functions.
+//
 
-struct __jcon_thread_session
-{
-  pthread_t thread;
-  jcon_thread_runtime_data_t runtime_data;
-};
+/**
+ * @brief Loop function that manages client.
+ * 
+ * Gets executed every loop iteration.
+ * Checks if data is available.
+ * Stops executing if client disconnects.
+ * 
+ * @param session_ptr     Pointer to jcon_thread session.
+ * @param thread_handler  jutil_thread handler. Used to manage mutex.
+ * 
+ * @return                @c true , if thread should continue.
+ * @return                @c false , if thread should stop.
+ */
+static int jcon_thread_run_function(void *session_ptr, jutil_thread_t *thread_handler);
 
-static void *jcon_thread_run_function(void *session_ptr);
-
-static void jcon_thread_loop_sleep(jcon_thread_t *session);
-
+/**
+ * @brief Logs debug and error messages.
+ * 
+ * Uses logger from @c session , or if logger is @c NULL , uses global logger.
+ * 
+ * @param session     Session for info about connection.
+ * @param log_type    Type of log message.
+ * @param file        Source code file, where message was logged.
+ * @param function    Function in which message was logged.
+ * @param line        Line, where message was logged.
+ * @param fmt         Format string for stdarg.h .
+ */
 static void jcon_thread_log(jcon_thread_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
-static int jcon_thread_start(jcon_thread_t *session);
 
-static void jcon_thread_stop(jcon_thread_t *session);
-
-static int jcon_thread_pthread_init(jcon_thread_t *session);
-static void jcon_thread_pthread_join(jcon_thread_t *session);
-
-static int jcon_thread_pthread_mutex_init(jcon_thread_t *session);
-static void jcon_thread_pthread_mutex_destroy(jcon_thread_t *session);
-
-static void jcon_thread_pthread_mutex_lock(jcon_thread_t *session);
-static void jcon_thread_pthread_mutex_unlock(jcon_thread_t *session);
 
 //==============================================================================
 // Define log macros.
-//==============================================================================
+//
 
-#define DEBUG(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#ifdef JCON_NO_DEBUG /* Allows to disable debug messages at compile time. */
+  #define DEBUG(session, fmt, ...)
+#else
+  #define DEBUG(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
 #define INFO(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define WARN(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define ERROR(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define CRITICAL(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define FATAL(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
+
+
+//==============================================================================
+// Define context structure.
+//
+
+/**
+ * @brief Holds data necessary for jcon_thread runtime.
+ */
+struct __jcon_thread_session
+{
+  jcon_client_t *client;                        /**< Client for connection. */
+  jutil_thread_t *thread;                       /**< Thread session. */
+
+  jcon_thread_data_handler_t data_handler;      /**< Handler to call, when data is available. */
+  jcon_thread_create_handler_t create_handler;  /**< Handler to call, when thread is created. */
+  jcon_thread_close_handler_t close_handler;    /**< Handler to call, when thread is closed. */
+
+  jlog_t *logger;                               /**< Logger for debug and error messages. */
+  void *session_context;                        /**< Context pointer to pass to handlers. */
+};
+
+
+
 //==============================================================================
 // Implement interface functions.
-//==============================================================================
+//
 
 //------------------------------------------------------------------------------
 //
@@ -107,21 +128,33 @@ jcon_thread_t *jcon_thread_init
     ERROR(NULL, "malloc() failed.");
     return NULL;
   }
-
-  session->runtime_data.client = client;
-  session->runtime_data.run = false;
-  session->runtime_data.loop_sleep = JCON_THREAD_LOOPSLEEP_DEFAULT;
   
-  session->runtime_data.data_handler = data_handler;
-  session->runtime_data.create_handler = create_handler;
-  session->runtime_data.close_handler = close_handler;
+  session->client = client;
+  session->data_handler = data_handler;
+  session->create_handler = create_handler;
+  session->close_handler = close_handler;
 
-  session->runtime_data.logger = logger;
-  session->runtime_data.session_context = ctx;
+  session->logger = logger;
+  session->session_context = ctx;
 
-  if(jcon_thread_start(session) == false)
+  session->thread = jutil_thread_init
+  (
+    jcon_thread_run_function,
+    logger,
+    JCON_THREAD_LOOPSLEEP_DEFAULT,
+    session
+  );
+  if(session->thread == NULL)
   {
-    ERROR(session, "jcon_thread_start() failed. Destroying session.");
+    ERROR(session, "jutil_thread_init() failed. Destroying session.");
+    free(session);
+    return NULL;
+  }
+
+  if(jutil_thread_start(session->thread) == false)
+  {
+    ERROR(session, "jutil_thread_start() failed. Destroying session.");
+    jutil_thread_free(session->thread);
     free(session);
     return NULL;
   }
@@ -139,8 +172,7 @@ void jcon_thread_free(jcon_thread_t *session)
     return;
   }
 
-  jcon_thread_stop(session);
-
+  jutil_thread_free(session->thread);
   free(session);
 }
 
@@ -154,13 +186,7 @@ int jcon_thread_isRunning(jcon_thread_t *session)
     return false;
   }
 
-  int ret;
-
-  jcon_thread_pthread_mutex_lock(session);
-  ret = session->runtime_data.run;
-  jcon_thread_pthread_mutex_unlock(session);
-
-  return ret;
+  return jutil_thread_isRunning(session->thread);
 }
 
 //------------------------------------------------------------------------------
@@ -170,10 +196,10 @@ const char *jcon_thread_getConnectionType(jcon_thread_t *session)
   if(session == NULL)
   {
     ERROR(NULL, "Session is NULL.");
-    return false;
+    return NULL;
   }
 
-  return jcon_client_getConnectionType(session->runtime_data.client);
+  return jcon_client_getConnectionType(session->client);
 }
 
 //------------------------------------------------------------------------------
@@ -186,94 +212,68 @@ const char *jcon_thread_getReferenceString(jcon_thread_t *session)
     return false;
   }
 
-  return jcon_client_getReferenceString(session->runtime_data.client);
+  return jcon_client_getReferenceString(session->client);
 }
+
+
 
 //==============================================================================
 // Implement internal functions.
-//==============================================================================
+//
 
 //------------------------------------------------------------------------------
 //
-void *jcon_thread_run_function(void *session_ptr)
+int jcon_thread_run_function(void *session_ptr, jutil_thread_t *thread_handler)
 {
-  int run_loop;
-
   if(session_ptr == NULL)
   {
-    CRITICAL(NULL, "session_ptr is NULL.");
-    return NULL;
+    ERROR(NULL, "session_ptr is NULL.");
+    return false;
+  }
+
+  if(thread_handler == NULL)
+  {
+    ERROR(NULL, "thread_handler is NULL.");
+    return false;
   }
 
   jcon_thread_t *session = (jcon_thread_t *)session_ptr;
-
-  jcon_thread_pthread_mutex_lock(session);
-  run_loop = session->runtime_data.run;
-  jcon_thread_pthread_mutex_unlock(session);
+  int ret = true;
   
-  while(run_loop)
+  /* Check for new data */
+  jutil_thread_lockMutex(thread_handler);
+  if(jcon_client_newData(session->client))
   {
-    /* Check for new data */
-    jcon_thread_pthread_mutex_lock(session);
-    if(jcon_client_newData(session->runtime_data.client))
+    DEBUG(session, "New data available.");
+    if(session->data_handler)
     {
-      if(session->runtime_data.data_handler)
-      {
-        session->runtime_data.data_handler(
-          session->runtime_data.session_context,
-          session->runtime_data.client
-        );
-      }
+      session->data_handler(
+        session->session_context,
+        session->client
+      );
     }
-    jcon_thread_pthread_mutex_unlock(session);
+  }
+  jutil_thread_unlockMutex(thread_handler);
 
-    /* Check connection state */
-    jcon_thread_pthread_mutex_lock(session);
-    if(jcon_client_isConnected(session->runtime_data.client) == false)
+  /* Check connection state */
+  jutil_thread_lockMutex(thread_handler);
+  if(jcon_client_isConnected(session->client) == false)
+  {
+    DEBUG(session, "Client disconnect.");
+    if(session->close_handler)
     {
-      session->runtime_data.run = false;
-      if(session->runtime_data.close_handler)
-      {
-        session->runtime_data.close_handler(
-          session->runtime_data.session_context,
-          JCON_THREAD_CLOSETYPE_DISCONNECT,
-          jcon_thread_getReferenceString(session)
-        );
-      }
+      session->close_handler(
+        session->session_context,
+        JCON_THREAD_CLOSETYPE_DISCONNECT,
+        jcon_thread_getReferenceString(session)
+      );
     }
-    jcon_thread_pthread_mutex_unlock(session);
 
-    jcon_thread_loop_sleep(session);
-
-    /* Check for termination */
-    jcon_thread_pthread_mutex_lock(session);
-    run_loop = session->runtime_data.run;
-    jcon_thread_pthread_mutex_unlock(session);
+    ret = false;
   }
+  jutil_thread_unlockMutex(thread_handler);
 
-  DEBUG(session, "jcon_thread stopped.");
-  return NULL;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_thread_loop_sleep(jcon_thread_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return;
-  }
-
-  struct timespec slp;
-  slp.tv_sec = 0;
-  slp.tv_nsec = session->runtime_data.loop_sleep;
-
-  int ret_sleep = nanosleep(&slp, NULL);
-  if(ret_sleep)
-  {
-    ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
-  }
+  return ret;
 }
 
 //------------------------------------------------------------------------------
@@ -287,11 +287,11 @@ void jcon_thread_log(jcon_thread_t *session, int log_type, const char *file, con
   vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
 
-  if(session && session->runtime_data.client)
+  if(session && session->client)
   {
-    if(session->runtime_data.logger)
+    if(session->logger)
     {
-      jlog_log_message_m(session->runtime_data.logger, log_type, file, function, line, "<%s> %s", jcon_thread_getReferenceString(session), buf);
+      jlog_log_message_m(session->logger, log_type, file, function, line, "<%s> %s", jcon_thread_getReferenceString(session), buf);
     }
     else
     {
@@ -301,304 +301,5 @@ void jcon_thread_log(jcon_thread_t *session, int log_type, const char *file, con
   else
   {
     jlog_global_log_message_m(log_type, file, function, line, buf);
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-int jcon_thread_start(jcon_thread_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return false;
-  }
-
-  if(session->runtime_data.run)
-  {
-    WARN(session, "Thread is already running.");
-    return true;
-  }
-
-  if(jcon_thread_pthread_mutex_init(session) == false)
-  {
-    ERROR(session, "pthread_mutex could not be initialized.");
-    return false;
-  }
-
-  jcon_thread_pthread_mutex_lock(session);
-  if(jcon_thread_pthread_init(session) == false)
-  {
-    ERROR(session, "pthread could not be created.");
-    jcon_thread_pthread_mutex_unlock(session);
-    jcon_thread_pthread_mutex_destroy(session);
-    return false;
-  }
-
-  session->runtime_data.run = true;
-  if(session->runtime_data.create_handler)
-  {
-    session->runtime_data.create_handler(
-      session->runtime_data.session_context,
-      JCON_THREAD_CREATETYPE_INIT,
-      jcon_thread_getReferenceString(session)
-    );
-  }
-  jcon_thread_pthread_mutex_unlock(session);
-
-  return true;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_thread_stop(jcon_thread_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return;
-  }
-
-  jcon_thread_pthread_mutex_lock(session);
-  session->runtime_data.run = false;
-  jcon_thread_pthread_mutex_unlock(session);
-
-  jcon_thread_pthread_join(session);
-  DEBUG(session, "Thread joined.");
-  jcon_thread_pthread_mutex_destroy(session);
-}
-
-//==============================================================================
-// Implement helper functions.
-//==============================================================================
-
-//------------------------------------------------------------------------------
-//
-int jcon_thread_pthread_init(jcon_thread_t *session)
-{
-  int error = pthread_create(&session->thread, NULL, &jcon_thread_run_function, session);
-  if(error)
-  {
-    switch(error)
-    {
-      case EAGAIN:
-      {
-        CRITICAL(session, "pthread_create() failed [%d : %s]. Resource limit.", error, strerror(error));
-        break;
-      }
-
-      case EINVAL:
-      {
-        ERROR(session, "pthread_create() failed [%d : %s]. Invalid attributes.", error, strerror(error));
-        break;
-      }
-
-      case EPERM:
-      {
-        ERROR(session, "pthread_create() failed [%d : %s]. Missing permission.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_create() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-
-    return false;
-  }
-
-  return true;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_thread_pthread_join(jcon_thread_t *session)
-{
-  int error = pthread_join(session->thread, NULL);
-  if(error)
-  {
-    switch(error)
-    {
-      case EDEADLK:
-      {
-        ERROR(session, "pthread_join() failed [%d : %s] Deadlock detected..", error, strerror(error));
-        break;
-      }
-
-      case EINVAL:
-      {
-        ERROR(session, "pthread_join() failed [%d : %s] Thread not joinable.", error, strerror(error));
-        break;
-      }
-
-      case ESRCH:
-      {
-        ERROR(session, "pthread_join() failed [%d : %s] Invalid thread-ID.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_join() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-int jcon_thread_pthread_mutex_init(jcon_thread_t *session)
-{
-  int error = pthread_mutex_init(&session->runtime_data.mutex, NULL);
-  if(error)
-  {
-    switch(error)
-    {
-      case EAGAIN:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s]. Missing resources.", error, strerror(error));
-        break;
-      }
-
-      case ENOMEM:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s]. Insufficient memory.", error, strerror(error));
-        break;
-      }
-
-      case EPERM:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s]. Missing privilege.", error, strerror(error));
-        break;
-      }
-
-      case EBUSY:
-      {
-        WARN(session, "pthread_mutex_init() failed [%d : %s]. Mutex already initialized.", error, strerror(error));
-        return true;
-        break;
-      }
-
-      case EINVAL:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s]. Invalid attributes.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_mutex_init() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-
-    return false;
-  }
-
-  return true;
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_thread_pthread_mutex_destroy(jcon_thread_t *session)
-{
-  int error = pthread_mutex_destroy(&session->runtime_data.mutex);
-  if(error)
-  {
-    switch(error)
-    {
-      case EBUSY:
-      {
-        WARN(session, "pthread_mutex_destroy() failed [%d : %s]. Mutex is locked.", error, strerror(error));
-        break;
-      }
-
-      case EINVAL:
-      {
-        ERROR(session, "pthread_mutex_destroy() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_mutex_destroy() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_thread_pthread_mutex_lock(jcon_thread_t *session)
-{
-  int error = pthread_mutex_lock(&session->runtime_data.mutex);
-  if(error)
-  {
-    switch(error)
-    {
-      case EINVAL:
-      {
-        ERROR(session, "pthread_mutex_lock() failed [%d : %s]. Invalid priority.", error, strerror(error));
-        break;
-      }
-
-      case EAGAIN:
-      {
-        ERROR(session, "pthread_mutex_lock() failed [%d : %s]. Max number of recursive locks.", error, strerror(error));
-        break;
-      }
-
-      case EDEADLK:
-      {
-        ERROR(session, "pthread_mutex_lock() failed [%d : %s]. Current thread already owns mutex.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_mutex_lock() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-void jcon_thread_pthread_mutex_unlock(jcon_thread_t *session)
-{
-  int error = pthread_mutex_unlock(&session->runtime_data.mutex);
-  if(error)
-  {
-    switch(error)
-    {
-      case EINVAL:
-      {
-        ERROR(session, "pthread_mutex_unlock() failed [%d : %s]. Invalid mutex.", error, strerror(error));
-        break;
-      }
-
-      case EAGAIN:
-      {
-        ERROR(session, "pthread_mutex_unlock() failed [%d : %s]. Max number of recursive locks.", error, strerror(error));
-        break;
-      }
-
-      case EPERM:
-      {
-        ERROR(session, "pthread_mutex_unlock() failed [%d : %s]. Current thread does not own the mutex.", error, strerror(error));
-        break;
-      }
-
-      default:
-      {
-        ERROR(session, "pthread_mutex_unlock() failed [%d : %s].", error, strerror(error));
-        break;
-      }
-    }
   }
 }

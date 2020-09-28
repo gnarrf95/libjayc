@@ -2,7 +2,7 @@
  * @file jcon_client.c
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief Defines functions for jcon_client interface.
+ * @brief Implements functions for jcon_client interface.
  * 
  * @date 2020-09-21
  * @copyright Copyright (c) 2020 by Manuel Nadji

@@ -24,7 +24,7 @@ extern "C" {
 #endif
 
 /**
- * @brief jcon_client session object, holds data and functions for operation.
+ * @brief Session object, holds data and functions for operation.
  */
 typedef struct __jcon_client_session jcon_client_t;
 

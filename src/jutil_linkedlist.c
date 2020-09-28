@@ -2,7 +2,7 @@
  * @file jutil_linkedlist.c
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief 
+ * @brief Implementation of jutil_linkedlist.
  * 
  * @date 2020-09-23
  * @copyright Copyright (c) 2020 by Manuel Nadji
@@ -11,6 +11,7 @@
 
 #include <jutil_linkedlist.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 struct __jutil_linkedlist
 {
@@ -29,16 +30,16 @@ jutil_linkedlist_t *jutil_linkedlist_init()
 
 //------------------------------------------------------------------------------
 //
-void jutil_linkedlist_free(jutil_linkedlist_t *list)
+void jutil_linkedlist_free(jutil_linkedlist_t **list)
 {
-  if(list == NULL)
+  if(list == NULL || *list == NULL)
   {
     return;
   }
 
-  while(list != NULL)
+  while(*list != NULL)
   {
-    list = jutil_linkedlist_pop(list);
+    jutil_linkedlist_pop(list);
   }
 }
 
@@ -78,14 +79,14 @@ jutil_linkedlist_t *jutil_linkedlist_iterate(jutil_linkedlist_t *head)
 
 //------------------------------------------------------------------------------
 //
-size_t jutil_linkedlist_size(jutil_linkedlist_t *list)
+size_t jutil_linkedlist_size(jutil_linkedlist_t **list)
 {
-  if(list == NULL)
+  if(list == NULL || *list == NULL)
   {
     return 0;
   }
 
-  jutil_linkedlist_t *itr = list;
+  jutil_linkedlist_t *itr = *list;
   
   size_t ret;
   for(ret = 0; itr != NULL; ret++)
@@ -98,52 +99,52 @@ size_t jutil_linkedlist_size(jutil_linkedlist_t *list)
 
 //------------------------------------------------------------------------------
 //
-jutil_linkedlist_t *jutil_linkedlist_push(jutil_linkedlist_t *list, void *data)
+int jutil_linkedlist_push(jutil_linkedlist_t **list, void *data)
 {
   if(list == NULL)
   {
-    jutil_linkedlist_t *node = jutil_linkedlist_allocNode();
-    if(node == NULL)
-    {
-      return NULL;
-    }
-
-    node->data = data;
-    return node;
+    return false;
   }
 
   jutil_linkedlist_t *node = jutil_linkedlist_allocNode();
   if(node == NULL)
   {
-    return NULL;
+    return false;
   }
-
-  node->next = list;
   node->data = data;
 
-  return node;
+  if(*list)
+  {
+    node->next = *list;
+  }
+
+  *list = node;
+  return true;
 }
 
 //------------------------------------------------------------------------------
 //
-jutil_linkedlist_t *jutil_linkedlist_pop(jutil_linkedlist_t *list)
+void *jutil_linkedlist_pop(jutil_linkedlist_t **list)
 {
-  if(list == NULL)
+  if(list == NULL || *list == NULL)
   {
     return NULL;
   }
 
-  jutil_linkedlist_t *new_head = list->next;
-  free(list);
+  void *ret = (*list)->data;
+  jutil_linkedlist_t *new_head = (*list)->next;
 
-  return new_head;
+  free(*list);
+  *list = new_head;
+
+  return ret;
 }
 
 //------------------------------------------------------------------------------
 //
-jutil_linkedlist_t *jutil_linkedlist_removeNode(jutil_linkedlist_t *list, jutil_linkedlist_t *node)
+void *jutil_linkedlist_removeNode(jutil_linkedlist_t **list, jutil_linkedlist_t *node)
 {
-  if(list == NULL)
+  if(list == NULL || *list == NULL)
   {
     return NULL;
   }
@@ -153,82 +154,89 @@ jutil_linkedlist_t *jutil_linkedlist_removeNode(jutil_linkedlist_t *list, jutil_
     return NULL;
   }
 
-  if(list == node)
+  void *ret = node->data;
+
+  if(*list == node)
   {
-    jutil_linkedlist_t *ret = list->next;
-    free(list);
+    jutil_linkedlist_t *tmp = (*list)->next;
+    free(*list);
+    *list = tmp;
+    
     return ret;
   }
 
-  jutil_linkedlist_t *iterator = list;
-  jutil_linkedlist_t *previous = NULL;
-  while(iterator != node)
+  jutil_linkedlist_t *prev = NULL;
+  jutil_linkedlist_t *itr = *list;
+  while(itr != NULL)
   {
-    previous = iterator;
-    iterator = jutil_linkedlist_iterate(iterator);
-
-    if(iterator == NULL)
+    if(itr == node)
     {
-      return list;
+      prev->next = itr->next;
+      free(itr);
+
+      return ret;
     }
+
+    prev = itr;
+    itr = jutil_linkedlist_iterate(itr);
   }
 
-  if(previous)
-  {
-    previous->next = iterator->next;
-  }
-
-  free(iterator);
-  return list;
+  return NULL;
 }
 
 //------------------------------------------------------------------------------
 //
-jutil_linkedlist_t *jutil_linkedlist_append(jutil_linkedlist_t *list, void *data)
+int jutil_linkedlist_append(jutil_linkedlist_t **list, void *data)
 {
   if(list == NULL)
+  {
+    return false;
+  }
+
+  if(*list == NULL)
   {
     jutil_linkedlist_t *node = jutil_linkedlist_allocNode();
     if(node == NULL)
     {
-      return NULL;
+      return false;
     }
 
     node->data = data;
-    return node;
+    *list = node;
+    return true;
   }
 
   jutil_linkedlist_t *node = jutil_linkedlist_allocNode();
   if(node == NULL)
   {
-    return NULL;
+    return false;
   }
   node->data = data;
 
-  jutil_linkedlist_t *iterator = list;
-  while(iterator->next != NULL)
+  jutil_linkedlist_t *itr = *list;
+  while(itr->next != NULL)
   {
-    iterator = jutil_linkedlist_iterate(iterator);
+    itr = jutil_linkedlist_iterate(itr);
   }
 
-  iterator->next = node;
-  return list;
+  itr->next = node;
+  return true;
 }
 
 //------------------------------------------------------------------------------
 //
-jutil_linkedlist_t *jutil_linkedlist_remove(jutil_linkedlist_t *list)
+void *jutil_linkedlist_remove(jutil_linkedlist_t **list)
 {
-  if(list == NULL)
+  if(list == NULL || *list == NULL)
   {
     return NULL;
   }
 
-  jutil_linkedlist_t *iterator = list;
-  while(iterator->next != NULL)
+  jutil_linkedlist_t *itr = *list;
+  while(itr->next != NULL)
   {
-    iterator = jutil_linkedlist_iterate(iterator);
+    itr = jutil_linkedlist_iterate(itr);
   }
 
-  return jutil_linkedlist_removeNode(list, iterator);
+  return jutil_linkedlist_removeNode(list, itr);
 }

@@ -76,7 +76,7 @@ jlog_t *jlog_stdio_session_init(int log_level);
 jlog_t *jlog_stdio_color_session_init(int log_level, void *ctx);
 
 #ifdef __cpluslpus
-} /* extern "C" */
+}
 #endif
 
 #endif /* INCLUDE_JLOG_STDIO_H */

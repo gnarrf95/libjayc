@@ -17,7 +17,7 @@
  * to represent the use of the program.
  * 
  * @date 2020-09-21
- * @copyright Copyright (c) 2020
+ * @copyright Copyright (c) 2020 by Manuel Nadji
  * 
  * @see https://man7.org/linux/man-pages/man3/syslog.3.html#DESCRIPTION
  * @see jlog.h
@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-/*******************************************************************************
+/**
  * @brief Create jlog_syslog session object.
  * 
  * jlog_syslog session is handled as singleton. Only one session can exists
@@ -43,7 +43,7 @@ extern "C" {
  * @param facility  Type of program (see <tt>$ man syslog</tt>).
  * 
  * @return          jlog session object.
- * @return          NULL, if failed.
+ * @return          @c NULL , if failed.
  */
 jlog_t *jlog_syslog_session_init(int log_level, const char *id, int facility);
 
@@ -51,4 +51,4 @@ jlog_t *jlog_syslog_session_init(int log_level, const char *id, int facility);
 }
 #endif
 
-#endif
+#endif /* INCLUDE_JLOG_SYSLOG_H */

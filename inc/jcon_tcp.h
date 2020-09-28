@@ -52,6 +52,8 @@ int jcon_tcp_pollForInput(jcon_tcp_t *session, int timeout);
 
 int jcon_tcp_isConnected(jcon_tcp_t *session);
 
+jcon_tcp_t *jcon_tcp_accept(jcon_tcp_t *session);
+
 size_t jcon_tcp_recvData(jcon_tcp_t *session, void *data_ptr, size_t data_size);
 size_t jcon_tcp_sendData(jcon_tcp_t *session, void *data_ptr, size_t data_size);
 

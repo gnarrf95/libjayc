@@ -318,6 +318,36 @@ int jcon_tcp_isConnected(jcon_tcp_t *session)
   return (session->file_descriptor > 0);
 }
 
+jcon_tcp_t *jcon_tcp_accept(jcon_tcp_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return NULL;
+  }
+
+  int new_fd;
+  struct sockaddr_in new_addr;
+  socklen_t addrlen = sizeof(struct sockaddr_in);
+
+  new_fd = accept(session->file_descriptor, (struct sockaddr *)&new_addr, &addrlen);
+  if(new_fd < 0)
+  {
+    ERROR(session, "accept() failed [%d : %s].", errno, strerror(errno));
+    return NULL;
+  }
+
+  jcon_tcp_t *new_con = jcon_tcp_clone(new_fd, new_addr, session->logger);
+  if(new_con == NULL)
+  {
+    ERROR(session, "jcon_tcp_clone() failed with new connection [TCP:%s:%u].", jcon_tcp_getIP(new_addr), jcon_tcp_getPort(new_addr));
+    close(new_fd);
+    return NULL;
+  }
+
+  return new_con;
+}
+
 //------------------------------------------------------------------------------
 //
 size_t jcon_tcp_recvData(jcon_tcp_t *session, void *data_ptr, size_t data_size)

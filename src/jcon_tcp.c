@@ -22,6 +22,34 @@
 #include <arpa/inet.h>
 #include <poll.h>
 
+#define JCON_TCP_CONNECTIONTYPE_NOTDEF 0
+#define JCON_TCP_CONNECTIONTYPE_CLIENT 1
+#define JCON_TCP_CONNECTIONTYPE_SERVER 2
+
+struct __jcon_tcp_session
+{
+  int file_descriptor;
+  struct sockaddr_in socket_address;
+  int connection_type;
+  
+  char *referenceString;
+  jlog_t *logger;
+};
+
+static char *jcon_tcp_getIP(struct sockaddr_in socket_address);
+static uint16_t jcon_tcp_getPort(struct sockaddr_in socket_address);
+
+static char *jcon_tcp_createReferenceString(struct sockaddr_in socket_address);
+
+static void jcon_tcp_log(jcon_tcp_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
+
+#define DEBUG(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define INFO(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define WARN(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define ERROR(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define CRITICAL(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define FATAL(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+
 //------------------------------------------------------------------------------
 //
 void jcon_tcp_log(jcon_tcp_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
@@ -63,6 +91,7 @@ jcon_tcp_t *jcon_tcp_simple_init(const char *address, uint16_t port, jlog_t *log
 
   session->file_descriptor = 0;
   session->logger = logger;
+  session->connection_type = JCON_TCP_CONNECTIONTYPE_NOTDEF;
 
   session->socket_address.sin_family = AF_INET;
   session->socket_address.sin_port = htons(port);
@@ -108,6 +137,7 @@ jcon_tcp_t *jcon_tcp_clone(int fd, struct sockaddr_in socket_address, jlog_t *lo
   session->file_descriptor = fd;
   session->socket_address = socket_address;
   session->logger = logger;
+  session->connection_type = JCON_TCP_CONNECTIONTYPE_NOTDEF;
 
   session->referenceString = jcon_tcp_createReferenceString(session->socket_address);
   if(session->referenceString == NULL)
@@ -173,6 +203,7 @@ int jcon_tcp_connect(jcon_tcp_t *session)
   }
 
   session->file_descriptor = fd;
+  session->connection_type = JCON_TCP_CONNECTIONTYPE_CLIENT;
   return true;
 }
 
@@ -220,6 +251,7 @@ int jcon_tcp_bind(jcon_tcp_t *session)
   }
 
   session->file_descriptor = fd;
+  session->connection_type = JCON_TCP_CONNECTIONTYPE_SERVER;
   return true;
 }
 
@@ -245,6 +277,7 @@ void jcon_tcp_close(jcon_tcp_t *session)
   }
 
   session->file_descriptor = 0;
+  session->connection_type = JCON_TCP_CONNECTIONTYPE_NOTDEF;
 }
 
 //------------------------------------------------------------------------------
@@ -318,12 +351,20 @@ int jcon_tcp_isConnected(jcon_tcp_t *session)
   return (session->file_descriptor > 0);
 }
 
+//------------------------------------------------------------------------------
+//
 jcon_tcp_t *jcon_tcp_accept(jcon_tcp_t *session)
 {
   if(session == NULL)
   {
     ERROR(NULL, "Session is NULL.");
     return NULL;
+  }
+
+  if(session->connection_type != JCON_TCP_CONNECTIONTYPE_SERVER)
+  {
+    ERROR(session, "Session is not of type server.");
+    return 0;
   }
 
   int new_fd;
@@ -358,15 +399,21 @@ size_t jcon_tcp_recvData(jcon_tcp_t *session, void *data_ptr, size_t data_size)
     return 0;
   }
 
-  if(data_size == 0)
-  {
-    ERROR(session, "data_size given is [0].");
-    return 0;
-  }
-
   if(jcon_tcp_isConnected(session) == false)
   {
     ERROR(session, "Session is not connected.");
+    return 0;
+  }
+
+  if(session->connection_type != JCON_TCP_CONNECTIONTYPE_CLIENT)
+  {
+    ERROR(session, "Session is not of type client.");
+    return 0;
+  }
+
+  if(data_size == 0)
+  {
+    ERROR(session, "data_size given is [0].");
     return 0;
   }
 
@@ -421,6 +468,18 @@ size_t jcon_tcp_sendData(jcon_tcp_t *session, void *data_ptr, size_t data_size)
     return 0;
   }
 
+  if(jcon_tcp_isConnected(session) == false)
+  {
+    ERROR(session, "Session is not connected.");
+    return 0;
+  }
+
+  if(session->connection_type != JCON_TCP_CONNECTIONTYPE_CLIENT)
+  {
+    ERROR(session, "Session is not of type client.");
+    return 0;
+  }
+
   if(data_ptr == NULL)
   {
     ERROR(session, "data_ptr is NULL.");
@@ -430,12 +489,6 @@ size_t jcon_tcp_sendData(jcon_tcp_t *session, void *data_ptr, size_t data_size)
   if(data_size == 0)
   {
     ERROR(session, "data_size given is [0].");
-    return 0;
-  }
-
-  if(jcon_tcp_isConnected(session) == false)
-  {
-    ERROR(session, "Session is not connected.");
     return 0;
   }
 

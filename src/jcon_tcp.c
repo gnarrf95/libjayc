@@ -439,7 +439,8 @@ size_t jcon_tcp_sendData(jcon_tcp_t *session, void *data_ptr, size_t data_size)
     return 0;
   }
 
-  int ret_send = send(session->file_descriptor, data_ptr, data_size, 0);
+  /* Fixed broken pipe termination, by preventing SIGPIPE. */
+  int ret_send = send(session->file_descriptor, data_ptr, data_size, MSG_NOSIGNAL);
   if(ret_send < 0)
   {
     ERROR(session, "send() failed [%d : %s].", errno, strerror(errno));

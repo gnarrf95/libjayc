@@ -1,7 +1,9 @@
 # ==============================================================================
 # Compiler
 
-CC = gcc -Wall -Werror -std=c11 -fPIC
+# Change compiler using "make COMPILER=<other-compiler>"
+COMPILER ?= gcc
+CC = $(COMPILER) -Wall -Werror -std=c11 -fPIC
 
 # ==============================================================================
 #Compiler and linker flags
@@ -14,8 +16,17 @@ CFLAGS = $(INC)
 LDF_JANSSON = -ljansson
 LDF_PTHREAD = -lpthread
 LDF_MYSQL = `mysql_config --libs`
+LDF_CRYPTO = -lcrypto
 
 LDFLAGS = $(LDF_PTHREAD)
+
+# Use build flags to change compilation parameters for library.
+# Flags:
+# * "-D JCON_NO_DEBUG"  if jcon modules should not log debug messages
+# * "-D JUTIL_NO_DEBUG" if jutil modules should not log debug messages
+# * "-D JLOG_EXIT_ATCRITICAL" if program should exit at critical log
+# * "-D JLOG_EXIT_ATERROR" if program should exit at error log
+BUILD_FLAGS = 
 
 # ==============================================================================
 # Sources
@@ -113,7 +124,7 @@ doc_doxygen: Doxyfile
 # General Recipes
 
 build/objects/%.o: src/%.c build
-	$(CC) -c $< -o $@ $(CFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS) $(BUILD_FLAGS)
 
 build:
 	mkdir -p build/objects

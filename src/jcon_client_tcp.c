@@ -156,10 +156,16 @@ struct __jcon_client_tcp_context
   jlog_t *logger;                     /**< Logger for debug and error messages. */
 };
 
-#define DEBUG(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#ifdef JCON_NO_DEBUG
+  #define DEBUG(ctx, fmt, ...)
+#else
+  #define DEBUG(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
 #define INFO(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define WARN(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define ERROR(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define CRITICAL(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define FATAL(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 //==============================================================================
 // Implement handlers and internal functions.

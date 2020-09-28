@@ -20,7 +20,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define DEBUG(ctx, fmt, ...) jutil_thread_log(ctx, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#ifdef JUTIL_NO_DEBUG
+  #define DEBUG(ctx, fmt, ...)
+#else
+  #define DEBUG(ctx, fmt, ...) jutil_thread_log(ctx, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
 #define INFO(ctx, fmt, ...) jutil_thread_log(ctx, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define WARN(ctx, fmt, ...) jutil_thread_log(ctx, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define ERROR(ctx, fmt, ...) jutil_thread_log(ctx, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)

@@ -50,7 +50,11 @@ static void jcon_thread_log(jcon_thread_t *session, int log_type, const char *fi
 // Define log macros.
 //==============================================================================
 
-#define DEBUG(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#ifdef JCON_NO_DEBUG
+  #define DEBUG(session, fmt, ...)
+#else
+  #define DEBUG(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
 #define INFO(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define WARN(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define ERROR(session, fmt, ...) jcon_thread_log(session, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)

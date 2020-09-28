@@ -43,7 +43,11 @@ static char *jcon_tcp_createReferenceString(struct sockaddr_in socket_address);
 
 static void jcon_tcp_log(jcon_tcp_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
-#define DEBUG(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#ifdef JCON_NO_DEBUG
+  #define DEBUG(session, fmt, ...)
+#else
+  #define DEBUG(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#endif
 #define INFO(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define WARN(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define ERROR(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)

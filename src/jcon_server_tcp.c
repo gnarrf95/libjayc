@@ -20,11 +20,9 @@
 #include <errno.h>
 #include <string.h>
 
-typedef struct __jcon_server_tcp_context jcon_server_tcp_context_t;
-
 //==============================================================================
 // Define constants and defaults.
-//==============================================================================
+//
 
 /**
  * @brief Connection type, to return for @c #jcon_client_getConnectionType() .
@@ -40,9 +38,11 @@ typedef struct __jcon_server_tcp_context jcon_server_tcp_context_t;
  */
 #define JCON_SERVER_TCP_POLL_TIMEOUT_DEFAULT 10
 
+
+
 //==============================================================================
 // Declare handlers and internal functions.
-//==============================================================================
+//
 
 /**
  * @brief Function for context free handler.
@@ -130,19 +130,11 @@ static jcon_client_t *jcon_server_tcp_acceptConnection(void *ctx);
  */
 static void jcon_server_tcp_log(void *ctx, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
-//==============================================================================
-// Define context structure and log macros.
-//==============================================================================
 
-/**
- * @brief Data for jcon_server_tcp object.
- */
-struct __jcon_server_tcp_context
-{
-  jcon_tcp_t *server;                 /**< jcon_tcp session object. */
-  int poll_timeout;                   /**< Timeout for asking for new data in milliseconds. */
-  jlog_t *logger;                     /**< Logger for debug and error messages. */
-};
+
+//==============================================================================
+// Define log macros.
+//
 
 #ifdef JCON_NO_DEBUG
   #define DEBUG(ctx, fmt, ...)
@@ -155,9 +147,27 @@ struct __jcon_server_tcp_context
 #define CRITICAL(ctx, fmt, ...) jcon_server_tcp_log(ctx, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define FATAL(ctx, fmt, ...) jcon_server_tcp_log(ctx, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
+
+
+//==============================================================================
+// Define context structure.
+//
+
+/**
+ * @brief Data for jcon_server_tcp object.
+ */
+typedef struct __jcon_server_tcp_context
+{
+  jcon_tcp_t *server;                 /**< jcon_tcp session object. */
+  int poll_timeout;                   /**< Timeout for asking for new data in milliseconds. */
+  jlog_t *logger;                     /**< Logger for debug and error messages. */
+} jcon_server_tcp_context_t;
+
+
+
 //==============================================================================
 // Implement handlers and internal functions.
-//==============================================================================
+//
 
 //------------------------------------------------------------------------------
 //

@@ -7,6 +7,8 @@
  * @date 2020-09-21
  * @copyright Copyright (c) 2020 by Manuel Nadji
  * 
+ * @see jcon_client.h
+ * 
  */
 
 #ifndef INCLUDE_JCON_CLIENT_TCP_H
@@ -15,7 +17,6 @@
 #include <jcon_client.h>
 #include <jcon_tcp.h>
 #include <jlog.h>
-#include <netinet/in.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +36,19 @@ extern "C" {
  */
 jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t *logger);
 
+/**
+ * @brief Initialize client from existing jcon_tcp client session.
+ * 
+ * When jcon_tcp server session accepts new connection,
+ * it returns a new session, that can be used to create a
+ * new client.
+ * 
+ * @param tcp_session jcon_tcp session to use.
+ * @param logger      Logger to use.
+ * 
+ * @return            jcon_client session for new connection.
+ * @return            @c NULL , if error occured.
+ */
 jcon_client_t *jcon_client_tcp_session_tcpClone(jcon_tcp_t *tcp_session, jlog_t *logger);
 
 #ifdef __cplusplus

@@ -39,16 +39,18 @@ extern "C" {
 
 //==============================================================================
 // Define object types.
-//==============================================================================
+//
 
 /**
  * @brief jcon_thread session object.
  */
 typedef struct __jcon_thread_session jcon_thread_t;
 
+
+
 //==============================================================================
 // Define create and close types.
-//==============================================================================
+//
 
 /**
  * @brief A new connection was initialized.
@@ -72,9 +74,11 @@ typedef struct __jcon_thread_session jcon_thread_t;
  */
 #define JCON_THREAD_CLOSETYPE_EXTERN 1
 
+
+
 //==============================================================================
 // Define handler types.
-//==============================================================================
+//
 
 /**
  * @brief Handles how data is read, when available.
@@ -115,9 +119,11 @@ typedef void (*jcon_thread_create_handler_t)(void *ctx, int create_type, const c
  */
 typedef void (*jcon_thread_close_handler_t)(void *ctx, int close_type, const char *reference_string);
 
+
+
 //==============================================================================
 // Define interface functions.
-//==============================================================================
+//
 
 /**
  * @brief Initializes and starts the jcon_thread.

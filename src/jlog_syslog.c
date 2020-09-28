@@ -16,11 +16,32 @@
 #include <stdarg.h>
 #include <syslog.h>
 
+//==============================================================================
+// Define global variables.
+//
+
+/**
+ * @brief Singleton session.
+ * 
+ */
 static jlog_t *singleton_session;
 
+
+
+//==============================================================================
+// Declare internal functions.
+//
+
+/**
+ * @brief Handler to free memory.
+ * 
+ * Closes syslog connection and frees the session memory.
+ * 
+ * @param ctx Session memory to free.
+ */
 static void jlog_syslog_session_free_handler(void *ctx);
 
-/*******************************************************************************
+/**
  * @brief Handler to log message.
  *
  * @param ctx : Session context (not used in this logger).
@@ -29,7 +50,7 @@ static void jlog_syslog_session_free_handler(void *ctx);
  */
 static void jlog_syslog_message_handler(void *ctx, int log_type, const char *msg);
 
-/*******************************************************************************
+/**
  * @brief Handler to log message. Contains additional information (filename, function name, line number).
  *
  * @param ctx : Session context (not used in this logger).
@@ -40,6 +61,12 @@ static void jlog_syslog_message_handler(void *ctx, int log_type, const char *msg
  * @param msg : Message string to log.
  */
 static void jlog_syslog_message_handler_m(void *ctx, int log_type, const char *file, const char *function, int line, const char *msg);
+
+
+
+//==============================================================================
+// Implement interface functions.
+//
 
 //------------------------------------------------------------------------------
 //
@@ -60,6 +87,12 @@ jlog_t *jlog_syslog_session_init(int log_level, const char *id, int facility)
 
   return singleton_session;
 }
+
+
+
+//==============================================================================
+// Implement internal functions.
+//
 
 //------------------------------------------------------------------------------
 //

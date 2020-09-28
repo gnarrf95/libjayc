@@ -18,12 +18,11 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-
-typedef struct __jcon_client_tcp_context jcon_client_tcp_context_t;
+#include <netinet/in.h>
 
 //==============================================================================
 // Define constants and defaults.
-//==============================================================================
+//
 
 /**
  * @brief Connection type, to return for @c #jcon_client_getConnectionType() .
@@ -39,9 +38,11 @@ typedef struct __jcon_client_tcp_context jcon_client_tcp_context_t;
  */
 #define JCON_CLIENT_TCP_POLL_TIMEOUT_DEFAULT 10
 
+
+
 //==============================================================================
 // Declare handlers and internal functions.
-//==============================================================================
+//
 
 /**
  * @brief Function for context free handler.
@@ -142,19 +143,11 @@ static size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_si
  */
 static void jcon_client_tcp_log(void *ctx, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
-//==============================================================================
-// Define context structure and log macros.
-//==============================================================================
 
-/**
- * @brief Data for jcon_client_tcp object.
- */
-struct __jcon_client_tcp_context
-{
-  jcon_tcp_t *connection;             /**< jcon_tcp session object. */
-  int poll_timeout;                   /**< Timeout for asking for new data in milliseconds. */
-  jlog_t *logger;                     /**< Logger for debug and error messages. */
-};
+
+//==============================================================================
+// Define log macros.
+//
 
 #ifdef JCON_NO_DEBUG
   #define DEBUG(ctx, fmt, ...)
@@ -167,9 +160,27 @@ struct __jcon_client_tcp_context
 #define CRITICAL(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define FATAL(ctx, fmt, ...) jcon_client_tcp_log(ctx, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
+
+
+//==============================================================================
+// Define context structure.
+//
+
+/**
+ * @brief Data for jcon_client_tcp object.
+ */
+typedef struct __jcon_client_tcp_context
+{
+  jcon_tcp_t *connection;             /**< jcon_tcp session object. */
+  int poll_timeout;                   /**< Timeout for asking for new data in milliseconds. */
+  jlog_t *logger;                     /**< Logger for debug and error messages. */
+} jcon_client_tcp_context_t;
+
+
+
 //==============================================================================
 // Implement handlers and internal functions.
-//==============================================================================
+//
 
 //------------------------------------------------------------------------------
 //

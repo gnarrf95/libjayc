@@ -11,17 +11,13 @@
 
 #include <jcon_client_tcp.h>
 #include <jcon_client_dev.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
+#include <jcon_tcp.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <errno.h>
-#include <unistd.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <poll.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 typedef struct __jcon_client_tcp_context jcon_client_tcp_context_t;
 
@@ -42,13 +38,6 @@ typedef struct __jcon_client_tcp_context jcon_client_tcp_context_t;
  * wait for new data in milliseconds.
  */
 #define JCON_CLIENT_TCP_POLL_TIMEOUT_DEFAULT 10
-
-/**
- * @brief Maximum size of recv/send messages.
- * 
- * Used for buffers.
- */
-#define JCON_CLIENT_TCP_MAX_MESSAGE_SIZE 4096
 
 //==============================================================================
 // Declare handlers and internal functions.
@@ -93,16 +82,6 @@ static void jcon_client_tcp_close(void *ctx);
 static int jcon_client_tcp_isConnected(void *ctx);
 
 /**
- * @brief Creates @c jcon_client_tcp_context_t#reference_string .
- * 
- * @param sock_address  Socket address of client.
- * 
- * @return              Allocated string for reference.
- * @return              @c NULL , if error occured.
- */
-static char *jcon_client_tcp_createReferenceString(struct sockaddr_in sock_address);
-
-/**
  * @brief Returnes @c jcon_client_tcp_context_t#reference_string .
  * 
  * @param ctx Context of session to ask from.
@@ -111,26 +90,6 @@ static char *jcon_client_tcp_createReferenceString(struct sockaddr_in sock_addre
  * @return    @c NULL , if error occured.
  */
 static const char *jcon_client_tcp_getReferenceString(void *ctx);
-
-/**
- * @brief Gets IP address from socket address struct.
- * 
- * @param socket_address  Socket address to check.
- * 
- * @return                String with IP address.
- * @return                @c NULL , if error occured.
- */
-static char *jcon_client_tcp_getIP(struct sockaddr_in socket_address);
-
-/**
- * @brief Gets Port number from socket address struct.
- * 
- * @param socket_address  Socket address to check.
- * 
- * @return                Port number.
- * @return                @c 0 , if error occured.
- */
-static uint16_t jcon_client_tcp_getPort(struct sockaddr_in socket_address);
 
 /**
  * @brief Checks, if new data is available to read.
@@ -192,9 +151,7 @@ static void jcon_client_tcp_log(void *ctx, int log_type, const char *file, const
  */
 struct __jcon_client_tcp_context
 {
-  int file_descriptor;                /**< File descriptor for TCP socket. */
-  struct sockaddr_in socket_address;  /**< Describes connection address. */
-  char *reference_string;             /**< Connection info to return. */
+  jcon_tcp_t *connection;             /**< jcon_tcp session object. */
   int poll_timeout;                   /**< Timeout for asking for new data in milliseconds. */
   jlog_t *logger;                     /**< Logger for debug and error messages. */
 };
@@ -238,29 +195,13 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
 
   jcon_client_tcp_context_t *ctx = (jcon_client_tcp_context_t *)session->session_context;
 
-  ctx->file_descriptor = 0;
   ctx->poll_timeout = JCON_CLIENT_TCP_POLL_TIMEOUT_DEFAULT;
   ctx->logger = logger;
 
-  ctx->socket_address.sin_family = AF_INET;
-  ctx->socket_address.sin_port = htons(port);
-
-  struct hostent *hostinfo;
-  hostinfo = gethostbyname(address);
-  if(hostinfo == NULL)
+  ctx->connection = jcon_tcp_simple_init(address, port, logger);
+  if(ctx->connection == NULL)
   {
-    ERROR(NULL, "<TCP:%s:%u> gethostbyname() failed. Destroying context and session.", address, port);
-    free(ctx);
-    free(session);
-    return NULL;
-  }
-
-  ctx->socket_address.sin_addr = *(struct in_addr *)hostinfo->h_addr_list[0];
-
-  ctx->reference_string = jcon_client_tcp_createReferenceString(ctx->socket_address);
-  if(ctx->reference_string == NULL)
-  {
-    ERROR(NULL, "<TCP:%s:%u> json_client_tcp_createReferenceString() failed. Destroying context and session.", jcon_client_tcp_getIP(ctx->socket_address), jcon_client_tcp_getPort(ctx->socket_address));
+    ERROR(NULL, "<TCP:%s:%u> jcon_tcp_simple_init() failed. Destroying context and session.", address, port);
     free(ctx);
     free(session);
     return NULL;
@@ -276,7 +217,7 @@ jcon_client_t *jcon_client_tcp_session_clone(int file_descriptor, struct sockadd
   jcon_client_t *session = (jcon_client_t *)malloc(sizeof(jcon_client_t));
   if(session == NULL)
   {
-    ERROR(NULL, "<TCP:%s:%u> malloc() failed.", jcon_client_tcp_getIP(socket_address), jcon_client_tcp_getPort(socket_address));
+    ERROR(NULL, "<TCP> malloc() failed.");
     return NULL;
   }
 
@@ -292,21 +233,19 @@ jcon_client_t *jcon_client_tcp_session_clone(int file_descriptor, struct sockadd
   session->session_context = malloc(sizeof(jcon_client_tcp_context_t));
   if(session->session_context == NULL)
   {
-    ERROR(NULL, "<TCP:%s:%u> malloc() failed. Destroying session.", jcon_client_tcp_getIP(socket_address), jcon_client_tcp_getPort(socket_address));
+    ERROR(NULL, "<TCP> malloc() failed. Destroying session.");
     free(session);
     return NULL;
   }
 
   jcon_client_tcp_context_t *ctx = (jcon_client_tcp_context_t *)session->session_context;
 
-  ctx->file_descriptor = file_descriptor;
-  ctx->socket_address = socket_address;
   ctx->poll_timeout = JCON_CLIENT_TCP_POLL_TIMEOUT_DEFAULT;
   ctx->logger = logger;
-  ctx->reference_string = jcon_client_tcp_createReferenceString(socket_address);
-  if(ctx->reference_string == NULL)
+  ctx->connection = jcon_tcp_clone(file_descriptor, socket_address, logger);
+  if(ctx->connection == NULL)
   {
-    ERROR(NULL, "<TCP:%s:%u> json_client_tcp_createReferenceString() failed. Destroying context and session.", jcon_client_tcp_getIP(socket_address), jcon_client_tcp_getPort(socket_address));
+    ERROR(NULL, "<TCP> jcon_tcp_clone() failed. Destroying context and session.");
     free(ctx);
     free(session);
     return NULL;
@@ -326,7 +265,9 @@ void jcon_client_tcp_session_free(void *ctx)
   }
 
   jcon_client_tcp_close(ctx);
-  free(((jcon_client_tcp_context_t *)ctx)->reference_string);
+  jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
+
+  jcon_tcp_free(session_context->connection);
   free(ctx);
 }
 
@@ -340,28 +281,19 @@ int jcon_client_tcp_reset(void *ctx)
     return false;
   }
 
-  jcon_client_tcp_close(ctx);
+  if(jcon_client_isConnected(ctx))
+  {
+    jcon_client_tcp_close(ctx);
+  }
+
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  int fd = socket(AF_INET, SOCK_STREAM, 0);
-  if(fd < 0)
+  if(jcon_tcp_connect(session_context->connection) == false)
   {
-    ERROR(ctx, "socket() failed [%d : %s].", errno, strerror(errno));
+    ERROR(ctx, "jcon_tcp_connect() failed.");
     return false;
   }
-
-  if(connect(fd, (struct sockaddr *)&(session_context->socket_address), sizeof(session_context->socket_address)) < 0)
-  {
-    ERROR(ctx, "connect() failed [%d : %s]. Closing socket.", errno, strerror(errno));
-    if(close(fd) < 0)
-    {
-      ERROR(ctx, "close() failed [%d : %s].", errno, strerror(errno));
-    }
-    return false;
-  }
-
-  DEBUG(ctx, "Socket is connected.");
-  session_context->file_descriptor = fd;
+  
   return true;
 }
 
@@ -377,20 +309,13 @@ void jcon_client_tcp_close(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  if(session_context->file_descriptor > 0)
+  if(jcon_client_tcp_isConnected(ctx) == false)
   {
-    if(close(session_context->file_descriptor) < 0)
-    {
-      ERROR(ctx, "close() failed [%d : %s].", errno, strerror(errno));
-      return;
-    }
-    session_context->file_descriptor = 0;
-    DEBUG(ctx, "File descriptor closed.");
+    DEBUG(ctx, "Client not connected.");
+    return;
   }
-  else
-  {
-    DEBUG(ctx, "File descriptor is already closed.");
-  }
+
+  jcon_tcp_close(session_context->connection);
 }
 
 //------------------------------------------------------------------------------
@@ -405,51 +330,7 @@ int jcon_client_tcp_isConnected(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  return (session_context->file_descriptor > 0);
-}
-
-//------------------------------------------------------------------------------
-//
-char *jcon_client_tcp_createReferenceString(struct sockaddr_in socket_address)
-{
-  char buf[128] = { 0 };
-  char *ip;
-  uint16_t port;
-  
-  ip = jcon_client_tcp_getIP(socket_address);
-  if(ip == NULL)
-  {
-    ERROR(NULL, "jcon_client_tcp_getIP() failed.");
-    return NULL;
-  }
-
-  port = jcon_client_tcp_getPort(socket_address);
-  if(port == 0)
-  {
-    ERROR(NULL, "jcon_client_tcp_getPort() failed.");
-    return NULL;
-  }
-
-  if(sprintf(buf, "TCP:%s:%u", ip, port) < 0)
-  {
-    ERROR(NULL, "sprintf() failed.");
-    return NULL;
-  }
-
-  size_t size_refString = sizeof(char) * (strlen(buf) + 1);
-  char *ret = (char *)malloc(size_refString);
-  if(ret == NULL)
-  {
-    ERROR(NULL, "<TCP:%s:%u> malloc() failed.", jcon_client_tcp_getIP(socket_address), jcon_client_tcp_getPort(socket_address));
-    return NULL;
-  }
-
-  /* Changed implementation from using strcpy, to using memcpy;
-     to calm down devskim checks. */
-  memset(ret, 0, size_refString);
-  memcpy(ret, buf, size_refString);
-
-  return ret;
+  return jcon_tcp_isConnected(session_context->connection);
 }
 
 //------------------------------------------------------------------------------
@@ -464,28 +345,7 @@ const char *jcon_client_tcp_getReferenceString(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  return (const char *)session_context->reference_string;
-}
-
-//------------------------------------------------------------------------------
-//
-char *jcon_client_tcp_getIP(struct sockaddr_in socket_address)
-{
-  char *ip = inet_ntoa(socket_address.sin_addr);
-  if(ip == NULL)
-  {
-    ERROR(NULL, "inet_ntoa() failed.");
-    return NULL;
-  }
-
-  return ip;
-}
-
-//------------------------------------------------------------------------------
-//
-uint16_t jcon_client_tcp_getPort(struct sockaddr_in socket_address)
-{
-  return ntohs(socket_address.sin_port);
+  return jcon_tcp_getReferenceString(session_context->connection);
 }
 
 //------------------------------------------------------------------------------
@@ -500,52 +360,7 @@ int jcon_client_tcp_newData(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  if(jcon_client_tcp_isConnected(ctx) == false)
-  {
-    DEBUG(ctx, "Session not connected.");
-    return false;
-  }
-
-  struct pollfd poll_fds[1];
-  poll_fds->fd = session_context->file_descriptor;
-  poll_fds->events = POLLIN;
-
-  int ret_poll = poll(poll_fds, 1, session_context->poll_timeout);
-
-  if(ret_poll < 0)
-  {
-    ERROR(ctx, "poll() failed [%d : %s].", errno, strerror(errno));
-    return false;
-  }
-
-  if(ret_poll == 0)
-  {
-    return false;
-  }
-
-  int ret = true;
-
-  if(poll_fds->revents & POLLERR)
-  {
-    DEBUG(ctx, "poll() recieved [POLLERR].");
-    jcon_client_tcp_close(ctx);
-    ret = false;
-  }
-  if(poll_fds->revents & POLLNVAL)
-  {
-    DEBUG(ctx, "poll() recieved [POLLNVAL].");
-    ret = false;
-  }
-  if(poll_fds->revents & POLLIN)
-  {
-    DEBUG(ctx, "poll() recieved [POLLIN].");
-  }
-  if(poll_fds->revents & POLLHUP)
-  {
-    DEBUG(ctx, "poll() recieved [POLLHUP].");
-  }
-
-  return ret;
+  return jcon_tcp_pollForInput(session_context->connection, session_context->poll_timeout);
 }
 
 //------------------------------------------------------------------------------
@@ -558,46 +373,9 @@ size_t jcon_client_tcp_recvData(void *ctx, void *data_ptr, size_t data_size)
     return 0;
   }
 
-  if(data_size == 0)
-  {
-    ERROR(ctx, "data_size given is [0].");
-    return 0;
-  }
-  if(data_size > JCON_CLIENT_TCP_MAX_MESSAGE_SIZE)
-  {
-    ERROR(ctx, "data_size [%u] exceeds maximum message size [%u].", data_size, JCON_CLIENT_TCP_MAX_MESSAGE_SIZE);
-    return 0;
-  }
-
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  if(jcon_client_tcp_isConnected(ctx) == false)
-  {
-    WARN(ctx, "Session is not connected.");
-    return 0;
-  }
-
-  uint8_t buf[JCON_CLIENT_TCP_MAX_MESSAGE_SIZE] = { 0 };
-  int ret_recv = recv(session_context->file_descriptor, buf, sizeof(buf), 0);
-  if(ret_recv < 0)
-  {
-    ERROR(ctx, "recv() failed [%d : %s].", errno, strerror(errno));
-    return 0;
-  }
-
-  if(ret_recv == 0)
-  {
-    DEBUG(ctx, "recv() returned [0]. Closing connection.");
-    jcon_client_tcp_close(ctx);
-    return 0;
-  }
-
-  // If data_ptr is NULL, data is still read, but not returned.
-  if(data_ptr)
-  {
-    memcpy(data_ptr, buf, ret_recv);
-  }
-  return ret_recv;
+  return jcon_tcp_recvData(session_context->connection, data_ptr, data_size);
 }
 
 //------------------------------------------------------------------------------
@@ -610,39 +388,9 @@ size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_size)
     return 0;
   }
 
-  if(data_ptr == NULL)
-  {
-    ERROR(ctx, "data_ptr is NULL.");
-    return 0;
-  }
-
-  if(data_size == 0)
-  {
-    ERROR(ctx, "data_size given is [0].");
-    return 0;
-  }
-  if(data_size > JCON_CLIENT_TCP_MAX_MESSAGE_SIZE)
-  {
-    ERROR(ctx, "data_size [%u] exceeds maximum message size [%u].", data_size, JCON_CLIENT_TCP_MAX_MESSAGE_SIZE);
-    return 0;
-  }
-
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
-
-  if(jcon_client_tcp_isConnected(ctx) == false)
-  {
-    WARN(ctx, "Session is not connected.");
-    return 0;
-  }
-
-  int ret_send = send(session_context->file_descriptor, data_ptr, data_size, 0);
-  if(ret_send < 0)
-  {
-    ERROR(ctx, "send() failed [%d : %s].", errno, strerror(errno));
-    return 0;
-  }
-
-  return ret_send;
+  
+  return jcon_tcp_sendData(session_context->connection, data_ptr, data_size);
 }
 
 //------------------------------------------------------------------------------

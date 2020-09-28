@@ -2,7 +2,7 @@
  * @file jcon_tcp.c
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief 
+ * @brief Implementation of jcon_tcp.
  * 
  * @date 2020-09-28
  * @copyright Copyright (c) 2020 by Manuel Nadji
@@ -22,28 +22,136 @@
 #include <arpa/inet.h>
 #include <poll.h>
 
+//==============================================================================
+// Define constants.
+//
+
+/**
+ * @brief The connection type is not defined yet.
+ * 
+ * In case socket is not yet created or closed.
+ */
 #define JCON_TCP_CONNECTIONTYPE_NOTDEF 0
+
+/**
+ * @brief Socket operates as client.
+ * 
+ * Forbids session from using function
+ * @c #jcon_tcp_accept() .
+ */
 #define JCON_TCP_CONNECTIONTYPE_CLIENT 1
+
+/**
+ * @brief Socket operates as server.
+ * 
+ * Forbids session from using functions
+ * @c #jcon_tcp_recvData() and @c #jcon_tcp_sendData() .
+ */
 #define JCON_TCP_CONNECTIONTYPE_SERVER 2
 
+
+
+//==============================================================================
+// Define structures.
+//
+
+/**
+ * @brief Session object.
+ * 
+ * Holds data for socket operation.
+ */
 struct __jcon_tcp_session
 {
-  int file_descriptor;
-  struct sockaddr_in socket_address;
-  int connection_type;
+  int file_descriptor;                /**< File descriptor for socket. */
+  struct sockaddr_in socket_address;  /**< Address struct for socket. */
+  int connection_type;                /**< Enumeration with values:
+                                           * @c #JCON_TCP_CONNECTIONTYPE_NETDEF ,
+                                           * @c #JCON_TCP_CONNECTIONTYPE_CLIENT ,
+                                           * @c #JCON_TCP_CONNECTIONTYPE_SERVER . */
   
-  char *referenceString;
-  jlog_t *logger;
+  char *referenceString;              /**< Holds information about connection. */
+  jlog_t *logger;                     /**< Logger to use for debug and error output. */
 };
 
+
+
+//==============================================================================
+// Declare internal functions.
+//
+
+/**
+ * @brief Creates session from existing socket.
+ * 
+ * Used by @c #jcon_tcp_accept() .
+ * If server accepts new client, the connection to said
+ * client is made into new session.
+ * 
+ * @param fd              File descriptor of new socket.
+ * @param socket_address  Address struct of new socket.
+ * @param logger          Logger for new session.
+ * 
+ * @return                Session object for new client connection.
+ * @return                @c NULL in case of error.
+ */
+static jcon_tcp_t *jcon_tcp_clone(int fd, struct sockaddr_in socket_address, jlog_t *logger);
+
+/**
+ * @brief Extract IP address from address struct.
+ * 
+ * @param socket_address  Address struct.
+ * 
+ * @return                String with IP address.
+ * @return                @c NULL in case of error.
+ */
 static char *jcon_tcp_getIP(struct sockaddr_in socket_address);
+
+/**
+ * @brief Extract port number from address struct. 
+ * 
+ * @param socket_address  Address struct.
+ * 
+ * @return                Port number.
+ * @return                @c 0 in case of error.
+ */
 static uint16_t jcon_tcp_getPort(struct sockaddr_in socket_address);
 
+/**
+ * @brief Create reference string from socket address.
+ * 
+ * Reference string consists of connection type (TCP),
+ * IP address ( @c #jcon_tcp_getIP() ) and port number
+ * ( @c #jcon_tcp_getPort() ).
+ * 
+ * These items get combined into one string.
+ * 
+ * @param socket_address  Address struct.
+ * 
+ * @return                Allocated reference string.
+ * @return                @c NULL in case of error.
+ */
 static char *jcon_tcp_createReferenceString(struct sockaddr_in socket_address);
 
+/**
+ * @brief Sends log messages to logger with session data.
+ * 
+ * Uses logger. If available adds reference string to log messages.
+ * 
+ * @param session   Session object.
+ * @param log_type  (debug, info, warning, error, critical, fatal).
+ * @param file      Source code file.
+ * @param function  Function name.
+ * @param line      Line number of source file.
+ * @param fmt       String format for stdarg.h .
+ */
 static void jcon_tcp_log(jcon_tcp_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
-#ifdef JCON_NO_DEBUG
+
+
+//==============================================================================
+// Define log macros.
+//
+
+#ifdef JCON_NO_DEBUG /* Allow to turn of debug messages at compile time. */
   #define DEBUG(session, fmt, ...)
 #else
   #define DEBUG(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
@@ -54,33 +162,11 @@ static void jcon_tcp_log(jcon_tcp_t *session, int log_type, const char *file, co
 #define CRITICAL(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define FATAL(session, fmt, ...) jcon_tcp_log(session, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-//------------------------------------------------------------------------------
+
+
+//==============================================================================
+// Implement interface functions.
 //
-void jcon_tcp_log(jcon_tcp_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
-{
-  va_list args;
-  char buf[2048];
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
-  if(session)
-  {
-    if(session->logger)
-    {
-      jlog_log_message_m(session->logger, log_type, file, function, line, "<%s> %s", jcon_tcp_getReferenceString(session), buf);
-    }
-    else
-    {
-      jlog_global_log_message_m(log_type, file, function, line, "<%s> %s", jcon_tcp_getReferenceString(session), buf);
-    }
-  }
-  else
-  {
-    jlog_global_log_message_m(log_type, file, function, line, buf);
-  }
-}
 
 //------------------------------------------------------------------------------
 //
@@ -96,7 +182,6 @@ jcon_tcp_t *jcon_tcp_simple_init(const char *address, uint16_t port, jlog_t *log
   session->file_descriptor = 0;
   session->logger = logger;
   session->connection_type = JCON_TCP_CONNECTIONTYPE_NOTDEF;
-
   session->socket_address.sin_family = AF_INET;
   session->socket_address.sin_port = htons(port);
 
@@ -109,39 +194,6 @@ jcon_tcp_t *jcon_tcp_simple_init(const char *address, uint16_t port, jlog_t *log
     return NULL;
   }
   session->socket_address.sin_addr = *(struct in_addr *)hostinfo->h_addr_list[0];
-
-  session->referenceString = jcon_tcp_createReferenceString(session->socket_address);
-  if(session->referenceString == NULL)
-  {
-    ERROR(NULL, "<TCP> json_client_tcp_createReferenceString() failed. Destroying context and session.");
-    free(session);
-    return NULL;
-  }
-
-  return session;
-}
-
-//------------------------------------------------------------------------------
-//
-jcon_tcp_t *jcon_tcp_clone(int fd, struct sockaddr_in socket_address, jlog_t *logger)
-{
-  if(fd <= 0)
-  {
-    ERROR(NULL, "Invalid file descriptor [%d].", fd);
-    return NULL;
-  }
-
-  jcon_tcp_t *session = (jcon_tcp_t *)malloc(sizeof(jcon_tcp_t));
-  if(session == NULL)
-  {
-    ERROR(NULL, "malloc() failed.");
-    return NULL;
-  }
-
-  session->file_descriptor = fd;
-  session->socket_address = socket_address;
-  session->logger = logger;
-  session->connection_type = JCON_TCP_CONNECTIONTYPE_CLIENT;
 
   session->referenceString = jcon_tcp_createReferenceString(session->socket_address);
   if(session->referenceString == NULL)
@@ -344,19 +396,6 @@ int jcon_tcp_pollForInput(jcon_tcp_t *session, int timeout)
 
 //------------------------------------------------------------------------------
 //
-int jcon_tcp_isConnected(jcon_tcp_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return false;
-  }
-
-  return (session->file_descriptor > 0);
-}
-
-//------------------------------------------------------------------------------
-//
 jcon_tcp_t *jcon_tcp_accept(jcon_tcp_t *session)
 {
   if(session == NULL)
@@ -421,7 +460,7 @@ size_t jcon_tcp_recvData(jcon_tcp_t *session, void *data_ptr, size_t data_size)
     return 0;
   }
 
-  char *buf = (char *)malloc(data_size);
+  void *buf = malloc(data_size);
   if(buf == NULL)
   {
     ERROR(session, "malloc() failed.");
@@ -500,11 +539,83 @@ size_t jcon_tcp_sendData(jcon_tcp_t *session, void *data_ptr, size_t data_size)
   int ret_send = send(session->file_descriptor, data_ptr, data_size, MSG_NOSIGNAL);
   if(ret_send < 0)
   {
-    ERROR(session, "send() failed [%d : %s].", errno, strerror(errno));
+    if(errno == ECONNRESET || errno == EPIPE)
+    {
+      jcon_tcp_close(session);
+    }
+    else
+    {
+      ERROR(session, "send() failed [%d : %s].", errno, strerror(errno));
+    }
     return 0;
   }
 
   return ret_send;
+}
+
+//------------------------------------------------------------------------------
+//
+int jcon_tcp_isConnected(jcon_tcp_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return false;
+  }
+
+  return (session->file_descriptor > 0);
+}
+
+//------------------------------------------------------------------------------
+//
+const char *jcon_tcp_getReferenceString(jcon_tcp_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return NULL;
+  }
+
+  return session->referenceString;
+}
+
+
+
+//==============================================================================
+// Implement internal functions.
+//
+
+//------------------------------------------------------------------------------
+//
+jcon_tcp_t *jcon_tcp_clone(int fd, struct sockaddr_in socket_address, jlog_t *logger)
+{
+  if(fd <= 0)
+  {
+    ERROR(NULL, "Invalid file descriptor [%d].", fd);
+    return NULL;
+  }
+
+  jcon_tcp_t *session = (jcon_tcp_t *)malloc(sizeof(jcon_tcp_t));
+  if(session == NULL)
+  {
+    ERROR(NULL, "malloc() failed.");
+    return NULL;
+  }
+
+  session->file_descriptor = fd;
+  session->socket_address = socket_address;
+  session->logger = logger;
+  session->connection_type = JCON_TCP_CONNECTIONTYPE_CLIENT;
+
+  session->referenceString = jcon_tcp_createReferenceString(session->socket_address);
+  if(session->referenceString == NULL)
+  {
+    ERROR(NULL, "<TCP> json_client_tcp_createReferenceString() failed. Destroying context and session.");
+    free(session);
+    return NULL;
+  }
+
+  return session;
 }
 
 //------------------------------------------------------------------------------
@@ -574,13 +685,28 @@ char *jcon_tcp_createReferenceString(struct sockaddr_in socket_address)
 
 //------------------------------------------------------------------------------
 //
-const char *jcon_tcp_getReferenceString(jcon_tcp_t *session)
+void jcon_tcp_log(jcon_tcp_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
 {
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return NULL;
-  }
+  va_list args;
+  char buf[2048];
 
-  return session->referenceString;
+  va_start(args, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+
+  if(session)
+  {
+    if(session->logger)
+    {
+      jlog_log_message_m(session->logger, log_type, file, function, line, "<%s> %s", jcon_tcp_getReferenceString(session), buf);
+    }
+    else
+    {
+      jlog_global_log_message_m(log_type, file, function, line, "<%s> %s", jcon_tcp_getReferenceString(session), buf);
+    }
+  }
+  else
+  {
+    jlog_global_log_message_m(log_type, file, function, line, buf);
+  }
 }

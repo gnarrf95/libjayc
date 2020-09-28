@@ -25,8 +25,7 @@ extern "C" {
  * @param log_type  Type of log message (debug, info, warning, error).
  * @param msg       Message string to log.
  */
-typedef void(*jlog_message_handler_t)(void *ctx, int log_type,
-                                      const char *msg);
+typedef void(*jlog_message_handler_t)(void *ctx, int log_type, const char *msg);
 
 /**
  * @brief Function to handle log calls, uses source code information.
@@ -38,9 +37,7 @@ typedef void(*jlog_message_handler_t)(void *ctx, int log_type,
  * @param line      Line number on which log was called.
  * @param msg       Message string to log.
  */
-typedef void(*jlog_message_handler_m_t)(void *ctx, int log_type,
-                                        const char *file, const char *function,
-                                        int line, const char *msg);
+typedef void(*jlog_message_handler_m_t)(void *ctx, int log_type, const char *file, const char *function, int line, const char *msg);
 
 /**
  * @brief Handler to destroy session.

@@ -2,7 +2,7 @@
  * @file jutil_linkedlist.c
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief 
+ * @brief Implementation of jutil_linkedlist.
  * 
  * @date 2020-09-23
  * @copyright Copyright (c) 2020 by Manuel Nadji

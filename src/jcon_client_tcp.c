@@ -218,50 +218,6 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
 
 //------------------------------------------------------------------------------
 //
-jcon_client_t *jcon_client_tcp_session_clone(int file_descriptor, struct sockaddr_in socket_address, jlog_t *logger)
-{
-  jcon_client_t *session = (jcon_client_t *)malloc(sizeof(jcon_client_t));
-  if(session == NULL)
-  {
-    ERROR(NULL, "<TCP> malloc() failed.");
-    return NULL;
-  }
-
-  session->function_reset = &jcon_client_tcp_reset;
-  session->function_close = &jcon_client_tcp_close;
-  session->function_getReferenceString = &jcon_client_tcp_getReferenceString;
-  session->function_isConnected = &jcon_client_tcp_isConnected;
-  session->function_newData = &jcon_client_tcp_newData;
-  session->function_recvData = &jcon_client_tcp_recvData;
-  session->function_sendData = &jcon_client_tcp_sendData;
-  session->session_free_handler = &jcon_client_tcp_session_free;
-  session->connection_type = JCON_CLIENT_TCP_CONNECTIONTYPE;
-  session->session_context = malloc(sizeof(jcon_client_tcp_context_t));
-  if(session->session_context == NULL)
-  {
-    ERROR(NULL, "<TCP> malloc() failed. Destroying session.");
-    free(session);
-    return NULL;
-  }
-
-  jcon_client_tcp_context_t *ctx = (jcon_client_tcp_context_t *)session->session_context;
-
-  ctx->poll_timeout = JCON_CLIENT_TCP_POLL_TIMEOUT_DEFAULT;
-  ctx->logger = logger;
-  ctx->connection = jcon_tcp_clone(file_descriptor, socket_address, logger);
-  if(ctx->connection == NULL)
-  {
-    ERROR(NULL, "<TCP> jcon_tcp_clone() failed. Destroying context and session.");
-    free(ctx);
-    free(session);
-    return NULL;
-  }
-
-  return session;
-}
-
-//------------------------------------------------------------------------------
-//
 jcon_client_t *jcon_client_tcp_session_tcpClone(jcon_tcp_t *tcp_session, jlog_t *logger)
 {
   if(tcp_session == NULL)

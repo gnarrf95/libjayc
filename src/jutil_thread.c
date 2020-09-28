@@ -2,7 +2,7 @@
  * @file jutil_thread.c
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief 
+ * @brief Implementation of jutil_thread.
  * 
  * @date 2020-09-25
  * @copyright Copyright (c) 2020 by Manuel Nadji
@@ -20,7 +20,134 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef JUTIL_NO_DEBUG
+//==============================================================================
+// Define constants.
+//
+
+/**
+ * @brief pthread can be created.
+ */
+#define JUTIL_THREAD_STATE_STOPPED 0
+
+/**
+ * @brief pthread is initializing.
+ */
+#define JUTIL_THREAD_STATE_INIT 1
+
+/**
+ * @brief pthread is running, can be stopped and joined.
+ */
+#define JUTIL_THREAD_STATE_RUNNING 2
+
+/**
+ * @brief pthread is finished, waiting to be joined.
+ */
+#define JUTIL_THREAD_STATE_FINISHED 3
+
+
+
+//==============================================================================
+// Declare internal functions.
+//
+
+/**
+ * @brief Internal pthread handler.
+ * 
+ * Manages loop, sleep function and shutting down safely.
+ * 
+ * @param ctx Context provided by user.
+ * 
+ * @return    Currently not used.
+ */
+static void *jutil_thread_pthread_handler(void *ctx);
+
+/**
+ * @brief Sends log messages to logger with session data.
+ * 
+ * Uses logger. If available adds reference string to log messages.
+ * 
+ * @param session   Session object.
+ * @param log_type  (debug, info, warning, error, critical, fatal).
+ * @param file      Source code file.
+ * @param function  Function name.
+ * @param line      Line number of source file.
+ * @param fmt       String format for stdarg.h .
+ */
+static void jutil_thread_log(jutil_thread_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
+
+
+
+//==============================================================================
+// Declare helper functions.
+//
+
+/**
+ * @brief Creates pthread instance.
+ * 
+ * Manages error handling.
+ * 
+ * @param session Session with pthread to create.
+ * 
+ * @return        @c true , if successful.
+ * @return        @c false , if error occured.
+ */
+static int jutil_thread_pthread_create(jutil_thread_t *session);
+
+/**
+ * @brief Joines pthread.
+ * 
+ * Manages error handling.
+ * 
+ * @param session Session with pthread to join.
+ */
+static void jutil_thread_pthread_join(jutil_thread_t *session);
+
+/**
+ * @brief Initializes pthread_mutex instance.
+ * 
+ * Manages error handling.
+ * 
+ * @param session Session with pthread_mutex to create.
+ * 
+ * @return        @c true , if successful.
+ * @return        @c false , if error occured.
+ */
+static int jutil_thread_pmutex_init(jutil_thread_t *session);
+
+/**
+ * @brief Destroys pthread_mutex.
+ * 
+ * Manages error handling.
+ * 
+ * @param session Session with pthread_mutex to destroy.
+ */
+static void jutil_thread_pmutex_destroy(jutil_thread_t *session);
+
+/**
+ * @brief Locks pthread_mutex.
+ * 
+ * Manages error handling.
+ * 
+ * @param session Session with pthread_mutex.
+ */
+static void jutil_thread_pmutex_lock(jutil_thread_t *session);
+
+/**
+ * @brief Unlocks pthread_mutex.
+ * 
+ * Manages error handling.
+ * 
+ * @param session Session with pthread_mutex.
+ */
+static void jutil_thread_pmutex_unlock(jutil_thread_t *session);
+
+
+
+//==============================================================================
+// Define log macros.
+//
+
+#ifdef JUTIL_NO_DEBUG /* Allow to disable debug messages at compile time. */
   #define DEBUG(ctx, fmt, ...)
 #else
   #define DEBUG(ctx, fmt, ...) jutil_thread_log(ctx, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
@@ -31,78 +158,37 @@
 #define CRITICAL(ctx, fmt, ...)jutil_thread_log(ctx, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #define FATAL(ctx, fmt, ...) jutil_thread_log(ctx, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-//------------------------------------------------------------------------------
+//==============================================================================
+// Define structures.
 //
-void *jutil_thread_pthread_handler(void *ctx)
+
+/**
+ * @brief Holds data for thread runtime and operation.
+ * 
+ */
+struct __jutil_thread_session
 {
-  if(ctx == NULL)
-  {
-    ERROR(NULL, "Context is NULL.");
-    return NULL;
-  }
+  pthread_t thread;                           /**< pthread instance. */
+  pthread_mutex_t mutex;                      /**< pthread_mutex instance. */
+  jutil_thread_loop_function_t loop_function; /**< User provided function to run in loop. */
+  long loop_sleep;                            /**< How long the loop will wait (in nanoseconds), before continuing. */
+  jlog_t *logger;                             /**< Logger used for debug and error messages. */
 
-  jutil_thread_t *session = (jutil_thread_t *)ctx;
+  int thread_state;                           /**< State of thread. Enumeration with following values:
+                                                   * @c #JUTIL_THREAD_STATE_STOPPED
+                                                   * @c #JUTIL_THREAD_STATE_INIT
+                                                   * @c #JUTIL_THREAD_STATE_RUNNING
+                                                   * @c #JUTIL_THREAD_STATE_FINISHED */
+  int run_signal;                             /**< If set to 0, the thread will stop. */
+  
+  void *ctx;                                  /**< Context provided to @c #loop_function() . */
+};
 
-  if(session->loop_function == NULL)
-  {
-    ERROR(session, "Loop function is NULL.");
-    return NULL;
-  }
 
-  struct timespec sleep_time;
-  sleep_time.tv_sec = 0;
-  sleep_time.tv_nsec = session->loop_sleep;
 
-  int run;
-  jutil_thread_pmutex_lock(session);
-  run = session->run_signal;
-  session->thread_state = JUTIL_THREAD_STATE_RUNNING;
-  jutil_thread_pmutex_unlock(session);
-
-  DEBUG(session, "Thread start ...");
-
-  while(run)
-  {
-    /* Run loop function. */
-    int ret_loop = session->loop_function(session->ctx, session);
-
-    /* Sleep. */
-    if(nanosleep(&sleep_time, NULL))
-    {
-      ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
-    }
-
-    /* Check, if thread should exit. */
-    jutil_thread_pmutex_lock(session);
-    run = (session->run_signal && ret_loop);
-    jutil_thread_pmutex_unlock(session);
-  }
-
-  jutil_thread_pmutex_lock(session);
-  session->thread_state = JUTIL_THREAD_STATE_FINISHED;
-  jutil_thread_pmutex_unlock(session);
-
-  DEBUG(session, "Thread exit.");
-
-  return NULL;
-}
-
-//------------------------------------------------------------------------------
+//==============================================================================
+// Implement interface functions.
 //
-void jutil_thread_manage(jutil_thread_t *session)
-{
-  int state;
-
-  jutil_thread_pmutex_lock(session);
-  state = session->thread_state;
-  jutil_thread_pmutex_unlock(session);
-
-  if(state == JUTIL_THREAD_STATE_FINISHED)
-  {
-    jutil_thread_pthread_join(session);
-    session->thread_state = JUTIL_THREAD_STATE_STOPPED;
-  }
-}
 
 //------------------------------------------------------------------------------
 //
@@ -155,6 +241,23 @@ void jutil_thread_free(jutil_thread_t *session)
 
   jutil_thread_pmutex_destroy(session);
   free(session);
+}
+
+//------------------------------------------------------------------------------
+//
+void jutil_thread_manage(jutil_thread_t *session)
+{
+  int state;
+
+  jutil_thread_pmutex_lock(session);
+  state = session->thread_state;
+  jutil_thread_pmutex_unlock(session);
+
+  if(state == JUTIL_THREAD_STATE_FINISHED)
+  {
+    jutil_thread_pthread_join(session);
+    session->thread_state = JUTIL_THREAD_STATE_STOPPED;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -267,6 +370,111 @@ int jutil_thread_isRunning(jutil_thread_t *session)
 }
 
 
+
+//==============================================================================
+// Implement internal functions.
+//
+
+//------------------------------------------------------------------------------
+//
+void *jutil_thread_pthread_handler(void *ctx)
+{
+  if(ctx == NULL)
+  {
+    ERROR(NULL, "Context is NULL.");
+    return NULL;
+  }
+
+  jutil_thread_t *session = (jutil_thread_t *)ctx;
+
+  if(session->loop_function == NULL)
+  {
+    ERROR(session, "Loop function is NULL.");
+    return NULL;
+  }
+
+  struct timespec sleep_time;
+  sleep_time.tv_sec = 0;
+  sleep_time.tv_nsec = session->loop_sleep;
+
+  int run;
+  jutil_thread_pmutex_lock(session);
+  run = session->run_signal;
+  session->thread_state = JUTIL_THREAD_STATE_RUNNING;
+  jutil_thread_pmutex_unlock(session);
+
+  DEBUG(session, "Thread start ...");
+
+  while(run)
+  {
+    /* Run loop function. */
+    int ret_loop = session->loop_function(session->ctx, session);
+
+    /* Sleep. */
+    if(nanosleep(&sleep_time, NULL))
+    {
+      ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
+    }
+
+    /* Check, if thread should exit. */
+    jutil_thread_pmutex_lock(session);
+    run = (session->run_signal && ret_loop);
+    jutil_thread_pmutex_unlock(session);
+  }
+
+  jutil_thread_pmutex_lock(session);
+  session->thread_state = JUTIL_THREAD_STATE_FINISHED;
+  jutil_thread_pmutex_unlock(session);
+
+  DEBUG(session, "Thread exit.");
+
+  return NULL;
+}
+
+//------------------------------------------------------------------------------
+//
+void jutil_thread_log(jutil_thread_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
+{
+  va_list args;
+  char buf[2048];
+
+  va_start(args, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+
+  if(session)
+  {
+    unsigned long id;
+    if(session->thread_state == JUTIL_THREAD_STATE_STOPPED)
+    {
+      id = 0;
+    }
+    else
+    {
+      id = session->thread;
+    }
+
+    if(session->logger)
+    {
+      jlog_log_message_m(session->logger, log_type, file, function, line, "<pthread:%lu> %s", id, buf);
+    }
+    else
+    {
+      jlog_global_log_message_m(log_type, file, function, line, "<pthread:%lu> %s", id, buf);
+    }
+  }
+  else
+  {
+    jlog_global_log_message_m(log_type, file, function, line, buf);
+  }
+}
+
+
+
+//==============================================================================
+// Implement helper functions.
+//
+
 //------------------------------------------------------------------------------
 //
 int jutil_thread_pthread_create(jutil_thread_t *session)
@@ -307,7 +515,6 @@ int jutil_thread_pthread_create(jutil_thread_t *session)
   return true;
 }
 
-
 //------------------------------------------------------------------------------
 //
 void jutil_thread_pthread_join(jutil_thread_t *session)
@@ -343,7 +550,6 @@ void jutil_thread_pthread_join(jutil_thread_t *session)
     }
   }
 }
-
 
 //------------------------------------------------------------------------------
 //
@@ -397,7 +603,6 @@ int jutil_thread_pmutex_init(jutil_thread_t *session)
   return true;
 }
 
-
 //------------------------------------------------------------------------------
 //
 void jutil_thread_pmutex_destroy(jutil_thread_t *session)
@@ -427,7 +632,6 @@ void jutil_thread_pmutex_destroy(jutil_thread_t *session)
     }
   }
 }
-
 
 //------------------------------------------------------------------------------
 //
@@ -465,7 +669,6 @@ void jutil_thread_pmutex_lock(jutil_thread_t *session)
   }
 }
 
-
 //------------------------------------------------------------------------------
 //
 void jutil_thread_pmutex_unlock(jutil_thread_t *session)
@@ -499,43 +702,5 @@ void jutil_thread_pmutex_unlock(jutil_thread_t *session)
         break;
       }
     }
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-void jutil_thread_log(jutil_thread_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
-{
-  va_list args;
-  char buf[2048];
-
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  va_end(args);
-
-  if(session)
-  {
-    unsigned long id;
-    if(session->thread_state == JUTIL_THREAD_STATE_STOPPED)
-    {
-      id = 0;
-    }
-    else
-    {
-      id = session->thread;
-    }
-
-    if(session->logger)
-    {
-      jlog_log_message_m(session->logger, log_type, file, function, line, "<pthread:%lu> %s", id, buf);
-    }
-    else
-    {
-      jlog_global_log_message_m(log_type, file, function, line, "<pthread:%lu> %s", id, buf);
-    }
-  }
-  else
-  {
-    jlog_global_log_message_m(log_type, file, function, line, buf);
   }
 }

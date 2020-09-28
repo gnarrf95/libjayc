@@ -16,6 +16,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+/**
+ * @brief Global session object.
+ * 
+ * Used for global functions, so that logger can be accessed
+ * from anywhere in program.
+ */
 static struct __jlog_session *global_session;
 
 //------------------------------------------------------------------------------

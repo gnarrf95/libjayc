@@ -16,16 +16,52 @@
 #include <stdlib.h>
 #include <string.h>
 
+//==============================================================================
+// Define constants.
+//
+
+/**
+ * @brief ANSI code for color reset.
+ */
 #define JLOG_STDIO_COLOR_RESET "\033[0m"
 
+/**
+ * @brief Marker to display for debug messages.
+ */
 #define JLOG_STDIO_LOGSTRING_DEBUG "=DBG="
+
+/**
+ * @brief Marker to display for info messages.
+ */
 #define JLOG_STDIO_LOGSTRING_INFO "=INF="
+
+/**
+ * @brief Marker to display for warning messages.
+ */
 #define JLOG_STDIO_LOGSTRING_WARN "=WRN="
+
+/**
+ * @brief Marker to display for error messages.
+ */
 #define JLOG_STDIO_LOGSTRING_ERROR "=ERR="
+
+/**
+ * @brief Marker to display for critical messages.
+ */
 #define JLOG_STDIO_LOGSTRING_CRITICAL "*CRT*"
+
+/**
+ * @brief Marker to display for fatal messages.
+ */
 #define JLOG_STDIO_LOGSTRING_FATAL "**FATAL**"
 
-/*******************************************************************************
+
+
+//==============================================================================
+// Define structures.
+//
+
+/**
  * @brief Color context for jlog_stdio_color session.
  *        Colors are saved in ANSI color codes.
  *        http://web.theurbanpenguin.com/adding-color-to-your-output-from-c/
@@ -37,6 +73,93 @@ typedef struct __jlog_stdio_color_context
   char *warn_color;
   char *error_color;
 } jlog_stdio_color_context_t;
+
+
+
+//==============================================================================
+// Declare internal functions.
+//
+
+/**
+ * @brief Destroys jlog_stdio_color_context object.
+ * 
+ * @param ctx Object to destroy.
+ */
+static void jlog_stdio_color_context_free(void *ctx);
+
+/**
+ * @brief Destroys context for jlog_stdio_color session.
+ * 
+ * @param ctx Session context to destroy.
+ */
+static void jlog_stdio_color_session_free_handler(void *ctx);
+
+/**
+ * @brief Handler to log message.
+ *
+ * @param ctx       Session context (not used in this logger).
+ * @param log_type  Log type of message (debug, info, warning, error).
+ * @param msg       Message string to log.
+ */
+static void jlog_stdio_message_handler(void *ctx, int log_type, const char *msg);
+
+/**
+ * @brief Handler to log message. Contains additional information (filename, function name, line number).
+ *
+ * @param ctx       Session context (not used in this logger).
+ * @param log_type  Log type of message (debug, info, warning, error).
+ * @param file      File name in which log was called.
+ * @param function  Function name in which log was called.
+ * @param line      Line number on which log was called.
+ * @param msg       Message string to log.
+ */
+static void jlog_stdio_message_handler_m(void *ctx, int log_type, const char *file, const char *function, int line, const char *msg);
+
+/**
+ * @brief Prints message with stdio.
+ * 
+ * @param log_type  Log type of message (debug, info, warning, error).
+ * @param msg       Message string to log.
+ */
+static void jlog_stdio_print(int log_type, const char *msg);
+
+/**
+ * @brief Prints message with stdio. Contains additional information.
+ *
+ * @param log_type  Log type of message (debug, info, warning, error).
+ * @param file      File name in which log was called.
+ * @param function  Function name in which log was called.
+ * @param line      Line number on which log was called.
+ * @param msg       Message string to log.
+ */
+static void jlog_stdio_print_m(int log_type, const char *file, const char *function, int line, const char *msg);
+
+/**
+ * @brief Prints message with stdio with color.
+ * 
+ * @param color_context Contains colors for log types.
+ * @param log_type      Log type of message (debug, info, warning, error).
+ * @param msg           Message string to log.
+ */
+static void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, int log_type, const char *msg);
+
+/**
+ * @brief Prints message with stdio with color. Contains additional information.
+ *
+ * @param color_context Contains colors for log types.
+ * @param log_type      Log type of message (debug, info, warning, error).
+ * @param file          File name in which log was called.
+ * @param function      Function name in which log was called.
+ * @param line          Line number on which log was called.
+ * @param msg           Message string to log.
+ */
+static void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log_type, const char *file, const char *function, int line, const char *msg);
+
+
+
+//==============================================================================
+// Declare helper functions.
+//
 
 /**
  * @brief Allocates memory for color string and copies from param.
@@ -51,46 +174,11 @@ typedef struct __jlog_stdio_color_context
  */
 static char *jlog_stdio_color_init_colorString(const char *str);
 
-/*******************************************************************************
- * @brief Destroys jlog_stdio_color_context object.
- * 
- * @param ctx : Object to destroy.
- */
-static void jlog_stdio_color_context_free(void *ctx);
 
-/*******************************************************************************
- * @brief Destroys context for jlog_stdio_color session.
- * 
- * @param ctx: Session context to destroy.
- */
-static void jlog_stdio_color_session_free_handler(void *ctx);
 
-/*******************************************************************************
- * @brief Handler to log message.
- *
- * @param ctx : Session context (not used in this logger).
- * @param log_type : Log type of message (debug, info, warning, error).
- * @param msg : Message string to log.
- */
-static void jlog_stdio_message_handler(void *ctx, int log_type, const char *msg);
-
-/*******************************************************************************
- * @brief Handler to log message. Contains additional information (filename, function name, line number).
- *
- * @param ctx : Session context (not used in this logger).
- * @param log_type : Log type of message (debug, info, warning, error).
- * @param file : File name in which log was called.
- * @param function : Function name in which log was called.
- * @param line : Line number on which log was called.
- * @param msg : Message string to log.
- */
-static void jlog_stdio_message_handler_m(void *ctx, int log_type, const char *file, const char *function, int line, const char *msg);
-
-static void jlog_stdio_print(int log_type, const char *msg);
-static void jlog_stdio_print_m(int log_type, const char *file, const char *function, int line, const char *msg);
-
-static void jlog_stdio_color_print(jlog_stdio_color_context_t *color_context, int log_type, const char *msg);
-static void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log_type, const char *file, const char *function, int line, const char *msg);
+//==============================================================================
+// Implement interface functions.
+//
 
 //------------------------------------------------------------------------------
 //
@@ -139,25 +227,38 @@ void *jlog_stdio_color_context_init(const char *debug_color, const char *info_co
 
 //------------------------------------------------------------------------------
 //
-char *jlog_stdio_color_init_colorString(const char *str)
+jlog_t *jlog_stdio_session_init(int log_level)
 {
-  if(str == NULL)
-  {
-    return NULL;
-  }
+  jlog_t *session = (jlog_t *)malloc(sizeof(jlog_t));
 
-  size_t size_ret = sizeof(char) * (strlen(str) + 1);
-  char *ret = (char *)malloc(size_ret);
-  if(ret == NULL)
-  {
-    return NULL;
-  }
+  session->log_function = &jlog_stdio_message_handler;
+  session->log_function_m = &jlog_stdio_message_handler_m;
+  session->session_free_handler = NULL;
+  session->log_level = log_level;
+  session->session_context = NULL;
 
-  memset(ret, 0, size_ret);
-  memcpy(ret, str, size_ret);
-
-  return ret;
+  return session;
 }
+
+//------------------------------------------------------------------------------
+//
+jlog_t *jlog_stdio_color_session_init(int log_level, void *ctx)
+{
+  jlog_t *session = (jlog_t *)malloc(sizeof(jlog_t));
+
+  session->log_function = &jlog_stdio_message_handler;
+  session->log_function_m = &jlog_stdio_message_handler_m;
+  session->session_free_handler = &jlog_stdio_color_session_free_handler;
+  session->log_level = log_level;
+  session->session_context = ctx;
+
+  return session;
+}
+
+
+
+//==============================================================================
+// Implement internal functions.
 
 //------------------------------------------------------------------------------
 //
@@ -191,36 +292,6 @@ void jlog_stdio_color_context_free(void *ctx)
   }
 
   free(color_context);
-}
-
-//------------------------------------------------------------------------------
-//
-jlog_t *jlog_stdio_session_init(int log_level)
-{
-  jlog_t *session = (jlog_t *)malloc(sizeof(jlog_t));
-
-  session->log_function = &jlog_stdio_message_handler;
-  session->log_function_m = &jlog_stdio_message_handler_m;
-  session->session_free_handler = NULL;
-  session->log_level = log_level;
-  session->session_context = NULL;
-
-  return session;
-}
-
-//------------------------------------------------------------------------------
-//
-jlog_t *jlog_stdio_color_session_init(int log_level, void *ctx)
-{
-  jlog_t *session = (jlog_t *)malloc(sizeof(jlog_t));
-
-  session->log_function = &jlog_stdio_message_handler;
-  session->log_function_m = &jlog_stdio_message_handler_m;
-  session->session_free_handler = &jlog_stdio_color_session_free_handler;
-  session->log_level = log_level;
-  session->session_context = ctx;
-
-  return session;
 }
 
 //------------------------------------------------------------------------------
@@ -534,4 +605,32 @@ void jlog_stdio_color_print_m(jlog_stdio_color_context_t *color_context, int log
   }
 
   fprintf(out_stream, "[ %s%s%s %s:%d %s() ] %s%s%s\n", color, type, JLOG_STDIO_COLOR_RESET, file, line, function, color, msg, JLOG_STDIO_COLOR_RESET);
+}
+
+
+
+//==============================================================================
+// Implement helper functions.
+//
+
+//------------------------------------------------------------------------------
+//
+char *jlog_stdio_color_init_colorString(const char *str)
+{
+  if(str == NULL)
+  {
+    return NULL;
+  }
+
+  size_t size_ret = sizeof(char) * (strlen(str) + 1);
+  char *ret = (char *)malloc(size_ret);
+  if(ret == NULL)
+  {
+    return NULL;
+  }
+
+  memset(ret, 0, size_ret);
+  memcpy(ret, str, size_ret);
+
+  return ret;
 }

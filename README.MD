@@ -41,6 +41,19 @@ Although the project is written in C, it uses a object-oriented paradigm.
 I decided to use this approach, to allow new implementations, while making
 it possible to use these implementations in a unified, abstract interface.
 
+### Note From Developer
+This is a study project for me. I am creating this library,
+first because these are components i regularly need in my
+projects; and second for me to learn how to manage, structure
+and deploy projects like this.
+
+Some of my solutions and implementations might seem
+_suboptimal_ to some developers. I know that.
+I'm trying out some new things here.
+
+Thanks for your understanding! :grin:
+Greetings, @gnarrf95.
+
 ## Getting Started
 ### Prerequesites
 _This project does not have any library requirements yet._
@@ -76,7 +89,7 @@ make install PREFIX=<your installation path>
 ```
 
 ## Components
-The library uses _j_ as a prefix for its naming convention (f.ex. _jlog_, _jcon_).
+The library uses _j_ as a prefix for its naming convention (f.ex. _jlog_, _jcon_, _jutil_).
 
 ### jlog
 _jlog_ is a interface for a logger system. It provides a type and global

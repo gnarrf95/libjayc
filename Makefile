@@ -36,6 +36,7 @@ HEADERS = $(wildcard inc/*.h)
 SRC = $(wildcard src/*.c)
 SRC_TESTS = $(wildcard tests/*.c)
 SRC_EXEC = $(wildcard exec/*.c)
+SRC_EXECD = $(wildcard execd/*.c)
 
 # ==============================================================================
 # Objects
@@ -48,6 +49,7 @@ OBJ = $(subst src, build/objects, $(SRC:.c=.o))
 TARGET_LIBJAYC = build/lib/libjayc.so
 # TARGET_TESTS = $(subst tests,build/tests,$(SRC_TESTS:.c=))
 TARGET_EXEC = $(subst exec,build/bin,$(SRC_EXEC:.c=))
+TARGET_EXECD = $(subst execd,build/sbin,$(SRC_EXECD:.c=))
 
 # ==============================================================================
 # Install variables
@@ -57,6 +59,7 @@ PREFIX ?= /usr/local
 HEADERS_INSTALLED = $(subst inc/,$(PREFIX)/include/,$(HEADERS))
 TARGET_LIBJAYC_INSTALLED = $(PREFIX)/lib/$(subst build/lib/,,$(TARGET_LIBJAYC))
 TARGET_EXEC_INSTALLED = $(PREFIX)/bin/$(subst build/bin/,,$(TARGET_EXEC))
+TARGET_EXECD_INSTALLED = $(PREFIX)/sbin/$(subst build/sbin/,,$(TARGET_EXECD))
 
 # ==============================================================================
 # Build recipes
@@ -69,15 +72,18 @@ check: $(OBJ)
 # ------------------------------------------------------------------------------
 # Build all parts of the project
 .PHONY: all
-all: libs exec
+all: libs bins
 
 # ------------------------------------------------------------------------------
 # Compile Executables
-.PHONY: exec
-exec: $(TARGET_EXEC)
+.PHONY: bins
+bins: $(TARGET_EXEC) $(TARGET_EXECD)
 	@echo "All executables done."
 
 build/bin/%: exec/%.c $(OBJ)
+	$(CC) $? -o $@ $(INC) $(LIB) $(LDFLAGS) $(CFLAGS)
+
+build/sbin/%: execd/%.c $(OBJ)
 	$(CC) $? -o $@ $(INC) $(LIB) $(LDFLAGS) $(CFLAGS)
 
 # ------------------------------------------------------------------------------
@@ -92,7 +98,7 @@ $(TARGET_LIBJAYC): $(OBJ)
 # ------------------------------------------------------------------------------
 # Library Installation
 .PHONY: install
-install: install_lib install_inc install_bin
+install: install_lib install_inc install_bin install_sbin
 	@echo "Installation finished."
 
 install_lib: $(TARGET_LIBJAYC) preinstall
@@ -102,17 +108,21 @@ install_inc: preinstall
 	for header in $(HEADERS); do install -m 755 $$header $(PREFIX)/include/; done
 
 install_bin: preinstall $(TARGET_EXEC)
-	for binary in $(TARGET_EXEC); do install -m 755 $$binary $(PREFIX)/bin/; done
+	# for binary in $(TARGET_EXEC); do install -m 755 $$binary $(PREFIX)/bin/; done
+
+install_sbin: preinstall $(TARGET_EXECD)
+	for binary in $(TARGET_EXECD); do install -m 755 $$binary $(PREFIX)/sbin/; done
 
 preinstall:
 	install -d $(PREFIX)/include/
 	install -d $(PREFIX)/lib/
 	install -d $(PREFIX)/bin/
+	install -d $(PREFIX)/sbin/
 
 # ------------------------------------------------------------------------------
 # Library Uninstall
 .PHONY: uninstall
-uninstall: uninstall_lib uninstall_inc uninstall_bin
+uninstall: uninstall_lib uninstall_inc uninstall_bin uninstall_sbin
 	@echo "Uninstallation finished."
 
 uninstall_lib:
@@ -122,7 +132,10 @@ uninstall_inc:
 	for header in $(HEADERS_INSTALLED); do rm -f $$header; done
 
 uninstall_bin:
-	for binary in $(TARGET_EXEC_INSTALLED); do rm -f $$binary; done
+	# for binary in $(TARGET_EXEC_INSTALLED); do rm -f $$binary; done
+
+uninstall_sbin:
+	for binary in $(TARGET_EXECD_INSTALLED); do rm -f $$binary; done
 
 # ------------------------------------------------------------------------------
 # Make Documentation
@@ -155,6 +168,7 @@ build:
 	mkdir -p build/tests
 	mkdir -p build/lib
 	mkdir -p build/bin
+	mkdir -p build/sbin
 
 clean:
 	rm -rf $(TARGET_TESTS) $(TARGET_LIBJAYC) $(OBJ) docs/doxygen/ build/

@@ -59,24 +59,27 @@ TARGET_LIBJAYC_INSTALLED = $(PREFIX)/lib/$(subst build/lib/,,$(TARGET_LIBJAYC))
 # Build recipes
 
 # ------------------------------------------------------------------------------
+# Compile Tests
+check: $(OBJ)
+	@echo "Source Code compiled successfully."
+
+# ------------------------------------------------------------------------------
 # Build all parts of the project
-all: all_libs docs
+.PHONY: all
+all: libs docs
 
 # ------------------------------------------------------------------------------
 # Compile Library
-all_libs: $(TARGET_LIBJAYC)
+.PHONY: libs
+libs: $(TARGET_LIBJAYC)
 	@echo "All libraries done."
 
 $(TARGET_LIBJAYC): $(OBJ)
 	$(CC) -shared -o $@ $(CFLAGS) $? $(LDFLAGS)
 
 # ------------------------------------------------------------------------------
-# Compile Tests
-check: $(OBJ)
-	@echo "Source Code compiled successfully."
-
-# ------------------------------------------------------------------------------
 # Library Installation
+.PHONY: install
 install: install_lib install_inc
 	@echo "Installation finished."
 
@@ -92,6 +95,7 @@ preinstall:
 
 # ------------------------------------------------------------------------------
 # Library Uninstall
+.PHONY: uninstall
 uninstall: uninstall_lib uninstall_inc
 	@echo "Uninstallation finished."
 
@@ -103,6 +107,7 @@ uninstall_inc:
 
 # ------------------------------------------------------------------------------
 # Make Documentation
+.PHONY: docs
 docs: doc_doxygen
 	@echo "Documentation done."
 

@@ -17,16 +17,16 @@
 ## Table of Contents
 
 * [About the Project](#about-the-project)
+* [Note from Developer](#note-from-developer)
 * [Getting Started](#getting-started)
   * [Prerequesites](#prerequesites)
-  * [Build the Library](#build-the-library)
-  * [Build the Documentation](#build-the-documentation)
+  * [Building the Library](#building-the-library)
+  * [Building the Documentation](#building-the-documentation)
   * [Installation](#installation)
 * [Components](#components)
   * [jlog](#jlog)
-  * [jcon_client](#jcon_client)
-  * [jcon_server](#jcon_server)
-  * [jcon_thread](#jcon_thread)
+  * [jcon](#jcon)
+  * [jutil](#jutil)
 * [Using the Library](#using-the-library)
   * [Example Program](#example-program)
   * [Compiling Programs with libJayC](#compiling-programs-with-libjayc)
@@ -51,22 +51,22 @@ Some of my solutions and implementations might seem
 _suboptimal_ to some developers. I know that.
 I'm trying out some new things here.
 
-Thanks for your understanding! :grin:
+Thanks for your understanding! :grin:   
 Greetings, @gnarrf95.
 
 ## Getting Started
 ### Prerequesites
 _This project does not have any library requirements yet._
 
-### Build The Library
+### Building The Library
 The check, that all the source files compile successfully, call:
 ```bash
 make check
 ```
 
-To compile the library, simply call `make`.
+To compile the library, simply call `make libs`.
 
-### Build The Documentation
+### Building The Documentation
 The documentation is build using:
 ```bash
 make docs

@@ -52,7 +52,7 @@ _suboptimal_ to some developers. I know that.
 I'm trying out some new things here.
 
 Thanks for your understanding! :grin:   
-Greetings, @gnarrf95.
+Greetings, [@gnarrf95](https://github.com/gnarrf95).
 
 ## Getting Started
 ### Prerequesites

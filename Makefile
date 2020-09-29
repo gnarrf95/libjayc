@@ -18,7 +18,7 @@ LDF_PTHREAD = -lpthread
 LDF_MYSQL = `mysql_config --libs`
 LDF_CRYPTO = -lcrypto
 
-LDFLAGS = $(LDF_PTHREAD)
+LDFLAGS = $(LDF_PTHREAD) $(LDF_CRYPTO)
 
 # Use build flags to change compilation parameters for library.
 # Flags:

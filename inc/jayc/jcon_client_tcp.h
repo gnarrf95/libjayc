@@ -14,9 +14,9 @@
 #ifndef INCLUDE_JCON_CLIENT_TCP_H
 #define INCLUDE_JCON_CLIENT_TCP_H
 
-#include <jcon_client.h>
-#include <jcon_tcp.h>
-#include <jlog.h>
+#include <jayc/jcon_client.h>
+#include <jayc/jcon_tcp.h>
+#include <jayc/jlog.h>
 
 #ifdef __cplusplus
 extern "C" {

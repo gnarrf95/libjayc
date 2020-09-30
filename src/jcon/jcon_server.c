@@ -9,7 +9,7 @@
  * 
  */
 
-#include <jcon_server_dev.h>
+#include <jayc/jcon_server_dev.h>
 #include <stdbool.h>
 #include <stdlib.h>
 //------------------------------------------------------------------------------

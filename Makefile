@@ -31,9 +31,14 @@ BUILD_FLAGS =
 # ==============================================================================
 # Sources
 
-HEADERS = $(wildcard inc/*.h)
+HEADERS_INST = $(wildcard inc/jayc/*.h)
+HEADERS = $(wildcard inc/*.h) $(HEADERS_INST)
 
-SRC = $(wildcard src/*.c)
+# Get all subdirectories of src
+# https://stackoverflow.com/questions/13897945/wildcard-to-obtain-list-of-all-directories
+SRCDIRS = $(sort $(dir $(wildcard src/*/)))
+
+SRC = $(foreach dir,$(SRCDIRS),$(wildcard $(dir)*.c))
 SRC_TESTS = $(wildcard tests/*.c)
 SRC_EXEC = $(wildcard exec/*.c)
 SRC_EXECD = $(wildcard execd/*.c)
@@ -42,6 +47,8 @@ SRC_EXECD = $(wildcard execd/*.c)
 # Objects
 
 OBJ = $(subst src, build/objects, $(SRC:.c=.o))
+
+OBJDIRS = $(sort $(dir $(OBJ)))
 
 # ==============================================================================
 # Targets
@@ -56,13 +63,16 @@ TARGET_EXECD = $(subst execd,build/sbin,$(SRC_EXECD:.c=))
 
 PREFIX ?= /usr/local
 
-HEADERS_INSTALLED = $(subst inc/,$(PREFIX)/include/,$(HEADERS))
+HEADERS_INSTALLED = $(subst inc/jayc/,$(PREFIX)/include/jayc/,$(HEADERS_INST))
 TARGET_LIBJAYC_INSTALLED = $(PREFIX)/lib/$(subst build/lib/,,$(TARGET_LIBJAYC))
 TARGET_EXEC_INSTALLED = $(PREFIX)/bin/$(subst build/bin/,,$(TARGET_EXEC))
 TARGET_EXECD_INSTALLED = $(PREFIX)/sbin/$(subst build/sbin/,,$(TARGET_EXECD))
 
 # ==============================================================================
 # Build recipes
+
+srcs:
+	@echo $(OBJDIRS)
 
 # ------------------------------------------------------------------------------
 # Compile Tests
@@ -105,7 +115,7 @@ install_lib: $(TARGET_LIBJAYC) preinstall
 	install -m 755 $(TARGET_LIBJAYC) $(PREFIX)/lib/
 
 install_inc: preinstall
-	for header in $(HEADERS); do install -m 755 $$header $(PREFIX)/include/; done
+	for header in $(HEADERS_INST); do install -m 755 $$header $(PREFIX)/include/jayc/; done
 
 install_bin: preinstall $(TARGET_EXEC)
 	# for binary in $(TARGET_EXEC); do install -m 755 $$binary $(PREFIX)/bin/; done
@@ -114,7 +124,7 @@ install_sbin: preinstall $(TARGET_EXECD)
 	for binary in $(TARGET_EXECD); do install -m 755 $$binary $(PREFIX)/sbin/; done
 
 preinstall:
-	install -d $(PREFIX)/include/
+	install -d $(PREFIX)/include/jayc/
 	install -d $(PREFIX)/lib/
 	install -d $(PREFIX)/bin/
 	install -d $(PREFIX)/sbin/
@@ -129,7 +139,7 @@ uninstall_lib:
 	rm -f $(TARGET_LIBJAYC_INSTALLED)
 
 uninstall_inc:
-	for header in $(HEADERS_INSTALLED); do rm -f $$header; done
+	rm -rf $(PREFIX)/include/jayc
 
 uninstall_bin:
 	# for binary in $(TARGET_EXEC_INSTALLED); do rm -f $$binary; done
@@ -169,7 +179,8 @@ build:
 	mkdir -p build/lib
 	mkdir -p build/bin
 	mkdir -p build/sbin
+	for dir in $(OBJDIRS); do mkdir -p $$dir; done
 
 clean:
-	rm -rf $(TARGET_TESTS) $(TARGET_LIBJAYC) $(OBJ) docs/doxygen/ build/
+	rm -rf docs/doxygen/ build/
 	clear

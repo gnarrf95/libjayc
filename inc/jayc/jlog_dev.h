@@ -12,7 +12,7 @@
 #ifndef INCLUDE_JLOG_DEV_H
 #define INCLUDE_JLOG_DEV_H
 
-#include <jlog.h>
+#include <jayc/jlog.h>
 
 #ifdef __cplusplus
 extern "C" {

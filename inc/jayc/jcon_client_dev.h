@@ -12,7 +12,7 @@
 #ifndef INCLUDE_JCON_CLIENT_DEV_H
 #define INCLUDE_JCON_CLIENT_DEV_H
 
-#include <jcon_client.h>
+#include <jayc/jcon_client.h>
 
 #ifdef __cplusplus
 extern "C" {

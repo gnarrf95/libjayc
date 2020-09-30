@@ -21,7 +21,7 @@
 #define INCLUDE_JUTIL_THREAD_H
 
 #include <pthread.h>
-#include <jlog.h>
+#include <jayc/jlog.h>
 
 #ifdef __cplusplus
 extern "C" {

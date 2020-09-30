@@ -9,11 +9,11 @@
  * 
  */
 
-#include <jcon_system.h>
-#include <jcon_server.h>
-#include <jcon_thread.h>
-#include <jutil_thread.h>
-#include <jutil_linkedlist.h>
+#include <jayc/jcon_system.h>
+#include <jayc/jcon_server.h>
+#include <jayc/jcon_thread.h>
+#include <jayc/jutil_thread.h>
+#include <jayc/jutil_linkedlist.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>

@@ -14,7 +14,7 @@
 #ifndef INCLUDE_JCON_SERVER_H
 #define INCLUDE_JCON_SERVER_H
 
-#include <jcon_client.h>
+#include <jayc/jcon_client.h>
 
 #ifdef __cplusplus
 extern "C" {

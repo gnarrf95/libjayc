@@ -99,6 +99,18 @@ int jcon_tcp_bind(jcon_tcp_t *session);
 void jcon_tcp_close(jcon_tcp_t *session);
 
 /**
+ * @brief Shuts socket down.
+ * 
+ * Will shutdown socket and wait until
+ * other side disconnects. Then closes
+ * socket. This should avoid the @c TIME_WAIT
+ * issue.
+ * 
+ * @param session Session to close.
+ */
+void jcon_tcp_shutdown(jcon_tcp_t *session);
+
+/**
  * @brief Checks wether input is available on socket.
  * 
  * Checks for input using @c poll() .

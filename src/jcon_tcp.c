@@ -321,6 +321,12 @@ void jcon_tcp_close(jcon_tcp_t *session)
     return;
   }
 
+  if(session->connection_type != JCON_TCP_CONNECTIONTYPE_CLIENT)
+  {
+    DEBUG(session, "Server socket cannot be shut down.");
+    return;
+  }
+
   if(jcon_tcp_isConnected(session) == false)
   {
     DEBUG(session, "Session is already closed.");
@@ -334,6 +340,47 @@ void jcon_tcp_close(jcon_tcp_t *session)
 
   session->file_descriptor = 0;
   session->connection_type = JCON_TCP_CONNECTIONTYPE_NOTDEF;
+}
+
+//------------------------------------------------------------------------------
+//
+void jcon_tcp_shutdown(jcon_tcp_t *session)
+{
+  if(session == NULL)
+  {
+    ERROR(NULL, "Session is NULL.");
+    return;
+  }
+
+  if(jcon_tcp_isConnected(session) == false)
+  {
+    DEBUG(session, "Session is already closed.");
+    return;
+  }
+
+  if(shutdown(session->file_descriptor, SHUT_WR) < 0)
+  {
+    ERROR(session, "shutdown() failed [%d : %s].", errno, strerror(errno));
+  }
+
+  int wait = true;
+  int ret;
+  char buf[16];
+  while(wait)
+  {
+    ret = recv(session->file_descriptor, buf, sizeof(buf), 0);
+
+    if(ret == 0)
+    {
+      DEBUG(session, "Socket shutdown successful.");
+      wait = false;
+    }
+    else if(ret < 0)
+    {
+      ERROR(session, "recv() failed [%d : %s].", errno, strerror(errno));
+      wait = false;
+    }
+  }
 }
 
 //------------------------------------------------------------------------------

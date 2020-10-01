@@ -251,7 +251,7 @@ void jlog_global_log_message_m(int log_type, const char *file, const char *funct
  */
 #define JLOG_FATAL(fmt, ...) jlog_global_log_message_m(JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
-#ifdef __cpluslpus
+#ifdef __cplusplus
 }
 #endif
 

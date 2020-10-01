@@ -27,6 +27,8 @@
   * [jlog](#jlog)
   * [jcon](#jcon)
   * [jutil](#jutil)
+  * [jinfo](#info)
+  * [jproc](#jproc)
 * [Using the Library](#using-the-library)
   * [Example Program](#example-program)
   * [Compiling Programs with libJayC](#compiling-programs-with-libjayc)
@@ -148,6 +150,28 @@ Contains functions to generate hashes.
 
 (Encryptions also planned, but not currently available)
 
+### jinfo
+The _jinfo_ component has functionality to get information
+about the library build.
+
+`jinfo_build_version()` returns info about the library version
+and the datetime of the compilation.
+
+`jinfo_build_platform()` returns info about the OS and the
+architecture the library was compiled on.
+
+`jinfo_build_compiler()` returns the name and version of
+the compiler used.
+
+### jproc
+The _jproc_ component provides functionality for process
+handling.
+
+For now it allows setting a exit handler, which is useful
+to free any global memory before exiting the program. Second
+you can set a signal handler to catch any signals recieved by
+the process.
+
 ## Using The Library
 
 ### Example Program
@@ -156,20 +180,20 @@ program, using the _jlog\_stdio_ logger. Let's call it `hw.c`.
 
 ```c
 #include <jayc/jlog_stdio.h>
-#include <stdlib.h>
+#include <jayc/jproc.h>
 
 int main()
 {
   jlog_t *logger = jlog_stdio_session_init(JLOG_LOGTYPE_DEBUG);
   if(logger == NULL)
   {
-    return EXIT_FAILURE;
+    jproc_exit(-1);
   }
 
   jlog_log_message(logger, JLOG_LOGTYPE_INFO, "Hello World!");
   jlog_session_free(logger);
 
-  return EXIT_SUCCESS;
+  jproc_exit(0);
 }
 ```
 ### Compiling Programs With libJayC

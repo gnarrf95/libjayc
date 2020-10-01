@@ -22,6 +22,7 @@
 #include <jayc/jcon_server_tcp.h>
 #include <jayc/jcon_client.h>
 #include <jayc/jutil_crypto.h>
+#include <jayc/jproc.h>
 #include <getopt.h>
 #include <string.h>
 #include <stdlib.h>
@@ -75,7 +76,7 @@ static jsys_t g_data =
   1
 };
 
-static void jsys_signalHandler(int dummy);
+static void jsys_signalHandler(int dummy, void *ctx);
 
 static void jsys_paramMgr(int argc, char *argv[]);
 
@@ -89,20 +90,22 @@ static void jsys_createHandler(void *ctx, const char *ref_string);
 
 static void jsys_closeHandler(void *ctx, const char *ref_string);
 
-static void jsys_cleanup();
+static void jsys_cleanup(void *ctx);
 
 //------------------------------------------------------------------------------
 //
 int main(int argc, char *argv[])
 {
+  jproc_exit_setHandler(jsys_cleanup, NULL);
+  jproc_signal_setHandler(SIGINT, jsys_signalHandler, NULL);
+
   jsys_paramMgr(argc, argv);
   jlog_global_session_set(g_data.logger);
 
   g_data.server = jcon_server_tcp_session_init(g_data.address, g_data.port, g_data.logger);
   if(g_data.server == NULL)
   {
-    jsys_cleanup();
-    return EXIT_FAILURE;
+    jproc_exit(EXIT_FAILURE);
   }
 
   g_data.system = jcon_system_init
@@ -116,27 +119,24 @@ int main(int argc, char *argv[])
   );
   if(g_data.system == NULL)
   {
-    jsys_cleanup();
-    return EXIT_FAILURE;
+    jproc_exit(EXIT_FAILURE);
   }
 
   struct timespec sleep_time;
   sleep_time.tv_sec = 1;
   sleep_time.tv_nsec = 0;
 
-  signal(SIGINT, jsys_signalHandler);
   while(g_data.run)
   {
     nanosleep(&sleep_time, NULL);
   }
 
-  jsys_cleanup();
-  return EXIT_SUCCESS;
+  jproc_exit(EXIT_SUCCESS);
 }
 
 //------------------------------------------------------------------------------
 //
-void jsys_signalHandler(int dummy)
+void jsys_signalHandler(int dummy, void *ctx)
 {
   JLOG_DEBUG("Shutdown signal recieved.");
   g_data.run = 0;
@@ -306,7 +306,7 @@ void jsys_closeHandler(void *ctx, const char *ref_string)
 
 //------------------------------------------------------------------------------
 //
-void jsys_cleanup()
+void jsys_cleanup(void *ctx)
 {
   if(g_data.system)
   {

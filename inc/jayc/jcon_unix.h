@@ -1,25 +1,25 @@
 /**
- * @file jcon_tcp.h
+ * @file jcon_unix.h
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief Provides interface to handle TCP sockets.
+ * @brief Provides interface to handle Unix Domain sockets.
  * 
- * Abstracts usage of TCP sockets.
+ * Abstracts usage of UDS sockets.
  * Manages error handling and other background tasks.
  * 
  * Provides client and server functionality.
  * 
- * @date 2020-09-27
+ * @date 2020-10-01
+ * 
  * @copyright Copyright (c) 2020 by Manuel Nadji
  * 
  */
 
-#ifndef INCLUDE_JCON_TCP_H
-#define INCLUDE_JCON_TCP_H
+#ifndef INCLUDE_JCON_UNIX_H
+#define INCLUDE_JCON_UNIX_H
 
 #include <jayc/jlog.h>
 #include <stddef.h>
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,38 +30,35 @@ extern "C" {
  * 
  * Holds data for socket operation.
  */
-typedef struct __jcon_tcp_session jcon_tcp_t;
+typedef struct __jcon_unix_session jcon_unix_t;
 
 /**
  * @brief Simple initializer. Only essential information needed.
  * 
- * TCP/IP stack provides a lot of options and flags to
- * initialize and manage a socket.
  * This function only requires the bare minimum to create
  * a connection.
  * 
- * @param address IP/DNS address of server to connect to.
- * @param port    Port to connect to.
- * @param logger  Logger to use in session.
+ * @param filepath  Filepath to uds-file.
+ * @param logger    Logger to use in session.
  * 
- * @return        Session object.
- * @return        @c NULL , if error occured.
+ * @return          Session object.
+ * @return          @c NULL , if error occured.
  */
-jcon_tcp_t *jcon_tcp_simple_init(const char *address, uint16_t port, jlog_t *logger);
+jcon_unix_t *jcon_unix_simple_init(const char *filepath, jlog_t *logger);
 
 /**
  * @brief Frees session memory.
  * 
  * @param session Session object to free.
  */
-void jcon_tcp_free(jcon_tcp_t *session);
+void jcon_unix_free(jcon_unix_t *session);
 
 /**
  * @brief Connect to server.
  * 
  * Creates socket and connects to a server.
  * This will mark the session as a client,
- * so no server functions ( @c #jcon_tcp_accept() )
+ * so no server functions ( @c #jcon_unix_accept() )
  * can be called using this session.
  * 
  * @param session Session to connect.
@@ -69,22 +66,22 @@ void jcon_tcp_free(jcon_tcp_t *session);
  * @return        @c true , if connection was established.
  * @return        @c false , if connection failed.
  */
-int jcon_tcp_connect(jcon_tcp_t *session);
+int jcon_unix_connect(jcon_unix_t *session);
 
 /**
- * @brief Binds socket to address.
+ * @brief Binds socket to a file.
  * 
  * This will mark the session as a server,
  * therefore no client functions
- * ( @c #jcon_tcp_recvData() and @c #jcon_tcp_sendData() )
+ * ( @c #jcon_unix_recvData() and @c #jcon_unix_sendData() )
  * can be called using this session.
  * 
  * @param session Session to bind.
  * 
- * @return        @c true , if socket was bound to address.
+ * @return        @c true , if socket was bound to file.
  * @return        @c false , if binding failed.
  */
-int jcon_tcp_bind(jcon_tcp_t *session);
+int jcon_unix_bind(jcon_unix_t *session);
 
 /**
  * @brief Closes socket.
@@ -96,7 +93,7 @@ int jcon_tcp_bind(jcon_tcp_t *session);
  * 
  * @param session Session to close.
  */
-void jcon_tcp_close(jcon_tcp_t *session);
+void jcon_unix_close(jcon_unix_t *session);
 
 /**
  * @brief Shuts socket down.
@@ -106,9 +103,12 @@ void jcon_tcp_close(jcon_tcp_t *session);
  * socket. This should avoid the @c TIME_WAIT
  * issue.
  * 
+ * @todo UDS sockets probably don't have
+ *       this issue. Check if necessary.
+ * 
  * @param session Session to shut down.
  */
-void jcon_tcp_shutdown(jcon_tcp_t *session);
+void jcon_unix_shutdown(jcon_unix_t *session);
 
 /**
  * @brief Checks wether input is available on socket.
@@ -134,7 +134,7 @@ void jcon_tcp_shutdown(jcon_tcp_t *session);
  * @return        @c false , if @c poll() timed out,
  *                or error occured.
  */
-int jcon_tcp_pollForInput(jcon_tcp_t *session, int timeout);
+int jcon_unix_pollForInput(jcon_unix_t *session, int timeout);
 
 /**
  * @brief Accepts connection request.
@@ -150,14 +150,14 @@ int jcon_tcp_pollForInput(jcon_tcp_t *session, int timeout);
  * @return        @c NULL , if no new connection was
  *                available or error occured.
  */
-jcon_tcp_t *jcon_tcp_accept(jcon_tcp_t *session);
+jcon_unix_t *jcon_unix_accept(jcon_unix_t *session);
 
 /**
  * @brief Recieve data from socket.
  * 
  * <b>Client function</b>
  * 
- * If new data is available (check using @c #jcon_tcp_pollForInput() ),
+ * If new data is available (check using @c #jcon_unix_pollForInput() ),
  * data can be read using this function.
  * 
  * Data is read from socket using buffer, and if data_ptr is not
@@ -179,7 +179,7 @@ jcon_tcp_t *jcon_tcp_accept(jcon_tcp_t *session);
  * @return          Size of data read.
  * @return          @c 0 , if no data read or error occured.
  */
-size_t jcon_tcp_recvData(jcon_tcp_t *session, void *data_ptr, size_t data_size);
+size_t jcon_unix_recvData(jcon_unix_t *session, void *data_ptr, size_t data_size);
 
 /**
  * @brief Send data via socket.
@@ -200,7 +200,7 @@ size_t jcon_tcp_recvData(jcon_tcp_t *session, void *data_ptr, size_t data_size);
  * @return          Size of data sent.
  * @return          @c 0 , if no data sent or error occured.
  */
-size_t jcon_tcp_sendData(jcon_tcp_t *session, void *data_ptr, size_t data_size);
+size_t jcon_unix_sendData(jcon_unix_t *session, void *data_ptr, size_t data_size);
 
 /**
  * @brief Checks if the session is connected.
@@ -210,22 +210,22 @@ size_t jcon_tcp_sendData(jcon_tcp_t *session, void *data_ptr, size_t data_size);
  * @return        @c true , if session connected.
  * @return        @c false , if session closed or error occured.
  */
-int jcon_tcp_isConnected(jcon_tcp_t *session);
+int jcon_unix_isConnected(jcon_unix_t *session);
 
 /**
  * @brief Returns string with address of socket.
  * 
- * <b>Example:</b> "TCP:127.0.0.1:8080"
+ * <b>Example:</b> "UNIX:/tmp/jayc/connection.uds"
  * 
  * @param session Session to check.
  * 
  * @return        String with connection info.
  * @return        @c NULL , if error occured.
  */
-const char *jcon_tcp_getReferenceString(jcon_tcp_t *session);
+const char *jcon_unix_getReferenceString(jcon_unix_t *session);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* INCLUDE_JCON_TCP_H */
+#endif /* INCLUDE_JCON_UNIX_H */

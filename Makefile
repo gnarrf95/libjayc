@@ -82,19 +82,19 @@ check: $(OBJ)
 # ------------------------------------------------------------------------------
 # Build all parts of the project
 .PHONY: all
-all: libs bins
+all: libs
 
 # ------------------------------------------------------------------------------
 # Compile Executables
 .PHONY: bins
-bins: $(TARGET_EXEC) $(TARGET_EXECD)
+bins: $(TARGET_EXEC) $(TARGET_EXECD) $(TARGET_LIBJAYC_INSTALLED)
 	@echo "All executables done."
 
-build/bin/%: exec/%.c $(OBJ)
-	$(CC) $? -o $@ $(INC) $(LIB) $(LDFLAGS) $(CFLAGS)
+build/bin/%: exec/%.c $(TARGET_LIBJAYC_INSTALLED)
+	$(CC) $< -o $@ $(INC) -L$(PREFIX)/lib/ -ljayc
 
-build/sbin/%: execd/%.c $(OBJ)
-	$(CC) $? -o $@ $(INC) $(LIB) $(LDFLAGS) $(CFLAGS)
+build/sbin/%: execd/%.c $(TARGET_LIBJAYC_INSTALLED)
+	$(CC) $< -o $@ $(INC) -L$(PREFIX)/lib/ -ljayc
 
 # ------------------------------------------------------------------------------
 # Compile Library
@@ -108,8 +108,11 @@ $(TARGET_LIBJAYC): $(OBJ)
 # ------------------------------------------------------------------------------
 # Library Installation
 .PHONY: install
-install: install_lib install_inc install_bin install_sbin
+install: install_lib install_inc
 	@echo "Installation finished."
+
+.PHONY: install_binaries
+install_binaries: install_bin install_sbin
 
 install_lib: $(TARGET_LIBJAYC) preinstall
 	install -m 755 $(TARGET_LIBJAYC) $(PREFIX)/lib/
@@ -118,7 +121,7 @@ install_inc: preinstall
 	for header in $(HEADERS_INST); do install -m 755 $$header $(PREFIX)/include/jayc/; done
 
 install_bin: preinstall $(TARGET_EXEC)
-	# for binary in $(TARGET_EXEC); do install -m 755 $$binary $(PREFIX)/bin/; done
+	for binary in $(TARGET_EXEC); do install -m 755 $$binary $(PREFIX)/bin/; done
 
 install_sbin: preinstall $(TARGET_EXECD)
 	for binary in $(TARGET_EXECD); do install -m 755 $$binary $(PREFIX)/sbin/; done
@@ -142,7 +145,7 @@ uninstall_inc:
 	rm -rf $(PREFIX)/include/jayc
 
 uninstall_bin:
-	# for binary in $(TARGET_EXEC_INSTALLED); do rm -f $$binary; done
+	for binary in $(TARGET_EXEC_INSTALLED); do rm -f $$binary; done
 
 uninstall_sbin:
 	for binary in $(TARGET_EXECD_INSTALLED); do rm -f $$binary; done

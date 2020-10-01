@@ -14,9 +14,9 @@
 #ifndef INCLUDE_JCON_SYSTEM_H
 #define INCLUDE_JCON_SYSTEM_H
 
-#include <jcon_server.h>
-#include <jcon_client.h>
-#include <jlog.h>
+#include <jayc/jcon_server.h>
+#include <jayc/jcon_client.h>
+#include <jayc/jlog.h>
 
 #ifdef __cplusplus
 extern "C" {

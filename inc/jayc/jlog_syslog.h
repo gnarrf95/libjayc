@@ -27,7 +27,7 @@
 #ifndef INCLUDE_JLOG_SYSLOG_H
 #define INCLUDE_JLOG_SYSLOG_H
 
-#include <jlog.h>
+#include <jayc/jlog.h>
 
 #ifdef __cplusplus
 extern "C" {

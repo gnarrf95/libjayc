@@ -11,7 +11,7 @@
 
 #define _POSIX_C_SOURCE 199309L /* needed for nanosleep() */
 
-#include <jutil_thread.h>
+#include <jayc/jutil_thread.h>
 #include <stdbool.h>
 #include <time.h>
 #include <errno.h>

@@ -9,9 +9,9 @@
  * 
  */
 
-#include <jcon_client_tcp.h>
-#include <jcon_client_dev.h>
-#include <jcon_tcp.h>
+#include <jayc/jcon_client_tcp.h>
+#include <jayc/jcon_client_dev.h>
+#include <jayc/jcon_tcp.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <errno.h>

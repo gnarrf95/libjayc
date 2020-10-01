@@ -15,13 +15,13 @@
 
 #define _POSIX_C_SOURCE 199309L /* needed for nanosleep() */
 
-#include <jlog.h>
-#include <jlog_stdio.h>
-#include <jlog_syslog.h>
-#include <jcon_system.h>
-#include <jcon_server_tcp.h>
-#include <jcon_client.h>
-#include <jutil_crypto.h>
+#include <jayc/jlog.h>
+#include <jayc/jlog_stdio.h>
+#include <jayc/jlog_syslog.h>
+#include <jayc/jcon_system.h>
+#include <jayc/jcon_server_tcp.h>
+#include <jayc/jcon_client.h>
+#include <jayc/jutil_crypto.h>
 #include <getopt.h>
 #include <string.h>
 #include <stdlib.h>

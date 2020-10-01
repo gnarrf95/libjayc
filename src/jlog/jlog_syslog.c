@@ -9,8 +9,8 @@
  * 
  */
 
-#include <jlog_syslog.h>
-#include <jlog_dev.h>
+#include <jayc/jlog_syslog.h>
+#include <jayc/jlog_dev.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>

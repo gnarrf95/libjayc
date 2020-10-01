@@ -12,8 +12,8 @@
 #ifndef INCLUDE_JCON_SERVER_TCP_H
 #define INCLUDE_JCON_SERVER_TCP_H
 
-#include <jcon_server.h>
-#include <jlog.h>
+#include <jayc/jcon_server.h>
+#include <jayc/jlog.h>
 #include <stdint.h>
 
 #ifdef __cplusplus

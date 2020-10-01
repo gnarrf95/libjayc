@@ -155,7 +155,7 @@ For an example to use the library, let's write a simple _Hello World_
 program, using the _jlog\_stdio_ logger. Let's call it `hw.c`.
 
 ```c
-#include <jlog_stdio.h>
+#include <jayc/jlog_stdio.h>
 #include <stdlib.h>
 
 int main()

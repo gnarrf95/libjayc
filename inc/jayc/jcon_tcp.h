@@ -17,7 +17,7 @@
 #ifndef INCLUDE_JCON_TCP_H
 #define INCLUDE_JCON_TCP_H
 
-#include <jlog.h>
+#include <jayc/jlog.h>
 #include <stddef.h>
 #include <stdint.h>
 

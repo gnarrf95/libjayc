@@ -106,7 +106,7 @@ void jcon_tcp_close(jcon_tcp_t *session);
  * socket. This should avoid the @c TIME_WAIT
  * issue.
  * 
- * @param session Session to close.
+ * @param session Session to shut down.
  */
 void jcon_tcp_shutdown(jcon_tcp_t *session);
 

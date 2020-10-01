@@ -198,7 +198,7 @@ jcon_tcp_t *jcon_tcp_simple_init(const char *address, uint16_t port, jlog_t *log
   session->referenceString = jcon_tcp_createReferenceString(session->socket_address);
   if(session->referenceString == NULL)
   {
-    ERROR(NULL, "<TCP> json_client_tcp_createReferenceString() failed. Destroying context and session.");
+    ERROR(NULL, "<TCP> jcon_tcp_createReferenceString() failed. Destroying session.");
     free(session);
     return NULL;
   }
@@ -321,12 +321,6 @@ void jcon_tcp_close(jcon_tcp_t *session)
     return;
   }
 
-  if(session->connection_type != JCON_TCP_CONNECTIONTYPE_CLIENT)
-  {
-    DEBUG(session, "Server socket cannot be shut down.");
-    return;
-  }
-
   if(jcon_tcp_isConnected(session) == false)
   {
     DEBUG(session, "Session is already closed.");
@@ -355,6 +349,12 @@ void jcon_tcp_shutdown(jcon_tcp_t *session)
   if(jcon_tcp_isConnected(session) == false)
   {
     DEBUG(session, "Session is already closed.");
+    return;
+  }
+
+  if(session->connection_type != JCON_TCP_CONNECTIONTYPE_CLIENT)
+  {
+    DEBUG(session, "Server socket cannot be shut down.");
     return;
   }
 

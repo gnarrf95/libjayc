@@ -66,7 +66,7 @@ The check, that all the source files compile successfully, call:
 make check
 ```
 
-To compile the library, simply call `make libs`.
+To compile the library, simply call `make all`.
 
 ### Building The Documentation
 The documentation is build using:
@@ -106,7 +106,7 @@ does provide simple usable implementations.
 
 There is a _quiet_ session, that can be created (`jlog_session_quiet()`).
 This session however, does not do anything. It is there to use in components,
-that you don't want to log anything (f.ex. if _jcon\_client\_tcp_ does not
+that you don't want to log anything (f.ex. if _jcon\_thread_ does not
 get a logger session, it defaults to the global logger).
 
 ### jcon
@@ -138,6 +138,10 @@ Also calls handlers for events.
 ### jutil
 The _jutil_ component contains a few useful abstractions for
 functionality.
+
+#### jutil_args
+A command line argument parser. Uses user defined parameter
+options with handler, to call when argument is passed.
 
 #### jutil_linkedlist
 A implementation of a simple linked list for easy data storage.

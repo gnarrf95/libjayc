@@ -4,6 +4,11 @@
  * 
  * @brief Interface for parsing command line arguments.
  * 
+ * CLI options get defined in @c #jutil_args_option_t .
+ * Should be created in array and then passed to
+ * @c #jutil_args_process() along with size of the
+ * array and the CLI variables from @c main() .
+ * 
  * @date 2020-10-01
  * @copyright Copyright (c) 2020 by Manuel Nadji
  * 

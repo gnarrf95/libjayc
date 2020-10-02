@@ -18,6 +18,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+//==============================================================================
+// Define context structure and log macros.
+//
+
 typedef struct __jutil_args_context
 {
   char *prog_name;
@@ -30,26 +34,6 @@ typedef struct __jutil_args_context
   size_t opt_number;
 } jutil_args_ctx_t;
 
-/**
- * @brief Checks for correctness of option.
- * 
- * @param option  Option to check.
- * 
- * @return        @c true , if option is correct.
- * @return        @c false , if option is invalid.
- */
-static int jutil_args_validateOption(jutil_args_option_t option);
-
-static int jutil_args_processShortTag(jutil_args_ctx_t *ctx);
-static int jutil_args_processLongTag(jutil_args_ctx_t *ctx);
-
-static jutil_args_option_t *jutil_args_getShortOption(jutil_args_ctx_t *ctx, char tag);
-static jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char *tag);
-
-static void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output);
-static void jutil_args_printError(jutil_args_ctx_t *ctx, const char *fmt, ...);
-static void jutil_args_printHelp(jutil_args_ctx_t *ctx);
-
 #ifdef JUTIL_NO_DEBUG /* Allow to disable debug messages at compile time. */
   #define DEBUG(fmt, ...)
 #else
@@ -60,6 +44,110 @@ static void jutil_args_printHelp(jutil_args_ctx_t *ctx);
 #define ERROR(fmt, ...) JLOG_ERROR(fmt, ##__VA_ARGS__)
 #define CRITICAL(fmt, ...)JLOG_CRITICAL(fmt, ##__VA_ARGS__)
 #define FATAL(fmt, ...) JLOG_FATAL(fmt, ##__VA_ARGS__)
+
+
+
+//==============================================================================
+// Declare internal funcions.
+//
+
+/**
+ * @brief Checks for correctness of option.
+ * 
+ * @param option  Option to check.
+ * 
+ * @return        @c true , if option is correct.
+ * @return        @c false , if option is invalid.
+ */
+static int jutil_args_validateOption(jutil_args_option_t option);
+
+/**
+ * @brief Processes short tags.
+ * 
+ * Extracts tag character from CLI argument
+ * finds the appropriate option definition
+ * and handles data parsing.
+ * 
+ * @param ctx Parser context.
+ * 
+ * @return    @c true , if successful.
+ * @return    @c false , if error occured.
+ */
+static int jutil_args_processShortTag(jutil_args_ctx_t *ctx);
+
+/**
+ * @brief Processes long tags.
+ * 
+ * Extracts tag string from CLI argument
+ * finds the appropriate option definition
+ * and handles data parsing.
+ * 
+ * @param ctx Parser context.
+ * 
+ * @return    @c true , if successful.
+ * @return    @c false , if error occured.
+ */
+static int jutil_args_processLongTag(jutil_args_ctx_t *ctx);
+
+/**
+ * @brief Gets option for tag from array.
+ * 
+ * Iterates through option array and returns
+ * option, that has a matching tag.
+ * 
+ * @param ctx Parser context.
+ * @param tag Tag to look for.
+ * 
+ * @return    Option pointer matching tag.
+ * @return    @c NULL , if no matching option was found.
+ */
+static jutil_args_option_t *jutil_args_getShortOption(jutil_args_ctx_t *ctx, char tag);
+
+/**
+ * @brief Gets option for tag from array.
+ * 
+ * Iterates through option array and returns
+ * option, that has a matching tag.
+ * 
+ * @param ctx Parser context.
+ * @param tag Tag to look for.
+ * 
+ * @return    Option pointer matching tag.
+ * @return    @c NULL , if no matching option was found.
+ */
+static jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char *tag);
+
+/**
+ * @brief Prints information about how to use arguments.
+ * 
+ * @param ctx     Parser context.
+ * @param output  (stdout/stderr).
+ */
+static void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output);
+
+/**
+ * @brief Prints usage error.
+ * 
+ * If arguments were not provided in a valid way,
+ * prints error message and usage info.
+ * 
+ * @param ctx Parser context.
+ * @param fmt Format string for stdarg.h .
+ */
+static void jutil_args_printError(jutil_args_ctx_t *ctx, const char *fmt, ...);
+
+/**
+ * @brief Prints usage info with additional description.
+ * 
+ * @param ctx Parser context.
+ */
+static void jutil_args_printHelp(jutil_args_ctx_t *ctx);
+
+
+
+//==============================================================================
+// Implement interface functions.
+//
 
 //------------------------------------------------------------------------------
 //
@@ -178,6 +266,12 @@ int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, siz
 
   return ret;
 }
+
+
+
+//==============================================================================
+// Implement internal functions.
+//
 
 //------------------------------------------------------------------------------
 //

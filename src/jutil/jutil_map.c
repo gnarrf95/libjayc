@@ -15,6 +15,55 @@
 #include <string.h>
 #include <stdbool.h>
 
+//==============================================================================
+// Define constants and structures.
+//
+
+/**
+ * @brief The maximum size that an index can have.
+ */
+#define JUTIL_MAP_SIZE_INDEX 128
+
+/**
+ * @brief Object pointer.
+ */
+struct __jutil_map
+{
+  jutil_linkedlist_t *list; /**< Map based on linkedlist. */
+};
+
+/**
+ * @brief Saves data and index in linked list.
+ */
+typedef struct __jutil_map_data
+{
+  char index[JUTIL_MAP_SIZE_INDEX]; /**< Index string for node. */
+  void *data;                       /**< Node data. */
+} jutil_map_data_t;
+
+
+
+//==============================================================================
+// Declare internal functions.
+//
+
+/**
+ * @brief Finds linkedlist node by index.
+ * 
+ * @param map   Map object.
+ * @param index Index string to search by.
+ * 
+ * @return      Node with index.
+ * @return      @c NULL , if not found or error occured.
+ */
+static jutil_linkedlist_t *jutil_map_getNode(jutil_map_t *map, const char *index);
+
+
+
+//==============================================================================
+// Implement interface functions.
+//
+
 //------------------------------------------------------------------------------
 //
 jutil_map_t *jutil_map_init()
@@ -215,7 +264,7 @@ int jutil_map_set(jutil_map_t *map, const char *index, void *data)
   jutil_linkedlist_t *node = jutil_map_getNode(map, index);
   if(node == NULL)
   {
-    return false;
+    return jutil_map_add(map, index, data);
   }
 
   jutil_map_data_t *map_data = jutil_linkedlist_getData(node);
@@ -260,6 +309,12 @@ void jutil_map_clear(jutil_map_t *map)
     free(map_data);
   }
 }
+
+
+
+//==============================================================================
+// Implement internal functions.
+//
 
 //------------------------------------------------------------------------------
 //

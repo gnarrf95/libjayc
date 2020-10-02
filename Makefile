@@ -26,7 +26,7 @@ LDFLAGS = $(LDF_PTHREAD) $(LDF_CRYPTO)
 # * "-D JUTIL_NO_DEBUG" if jutil modules should not log debug messages
 # * "-D JLOG_EXIT_ATCRITICAL" if program should exit at critical log
 # * "-D JLOG_EXIT_ATERROR" if program should exit at error log
-BUILD_FLAGS = 
+BUILD_FLAGS = -DJUTIL_NO_DEBUG
 
 # ==============================================================================
 # Sources

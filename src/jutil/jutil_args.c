@@ -222,7 +222,7 @@ int jutil_args_processShortTag(jutil_args_ctx_t *ctx)
   if(tag == 'h')
   {
     jutil_args_printHelp(ctx);
-    return true;
+    return false;
   }
 
   jutil_args_option_t *option = jutil_args_getShortOption(ctx, tag);
@@ -253,6 +253,7 @@ int jutil_args_processShortTag(jutil_args_ctx_t *ctx)
       if(ctx->counter >= ctx->argc)
       {
         jutil_args_printError(ctx, "Missing arguments for tag [-%c].", tag);
+        free(data);
         return false;
       }
 
@@ -386,7 +387,6 @@ jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char *tag)
 void jutil_args_printHelp(jutil_args_ctx_t *ctx)
 {
   jutil_args_printUsage(ctx, stdout);
-  jproc_exit(0);
 }
 
 //------------------------------------------------------------------------------

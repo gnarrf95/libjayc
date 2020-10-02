@@ -17,16 +17,18 @@
 ## Table of Contents
 
 * [About the Project](#about-the-project)
+* [Note from Developer](#note-from-developer)
 * [Getting Started](#getting-started)
   * [Prerequesites](#prerequesites)
-  * [Build the Library](#build-the-library)
-  * [Build the Documentation](#build-the-documentation)
+  * [Building the Library](#building-the-library)
+  * [Building the Documentation](#building-the-documentation)
   * [Installation](#installation)
 * [Components](#components)
   * [jlog](#jlog)
-  * [jcon_client](#jcon_client)
-  * [jcon_server](#jcon_server)
-  * [jcon_thread](#jcon_thread)
+  * [jcon](#jcon)
+  * [jutil](#jutil)
+  * [jinfo](#info)
+  * [jproc](#jproc)
 * [Using the Library](#using-the-library)
   * [Example Program](#example-program)
   * [Compiling Programs with libJayC](#compiling-programs-with-libjayc)
@@ -41,19 +43,32 @@ Although the project is written in C, it uses a object-oriented paradigm.
 I decided to use this approach, to allow new implementations, while making
 it possible to use these implementations in a unified, abstract interface.
 
+### Note From Developer
+This is a study project for me. I am creating this library,
+first because these are components i regularly need in my
+projects; and second for me to learn how to manage, structure
+and deploy projects like this.
+
+Some of my solutions and implementations might seem
+_suboptimal_ to some developers. I know that.
+I'm trying out some new things here.
+
+Thanks for your understanding! :grin:   
+Greetings, [@gnarrf95](https://github.com/gnarrf95).
+
 ## Getting Started
 ### Prerequesites
 _This project does not have any library requirements yet._
 
-### Build The Library
+### Building The Library
 The check, that all the source files compile successfully, call:
 ```bash
 make check
 ```
 
-To compile the library, simply call `make`.
+To compile the library, simply call `make all`.
 
-### Build The Documentation
+### Building The Documentation
 The documentation is build using:
 ```bash
 make docs
@@ -76,7 +91,7 @@ make install PREFIX=<your installation path>
 ```
 
 ## Components
-The library uses _j_ as a prefix for its naming convention (f.ex. _jlog_, _jcon_).
+The library uses _j_ as a prefix for its naming convention (f.ex. _jlog_, _jcon_, _jutil_).
 
 ### jlog
 _jlog_ is a interface for a logger system. It provides a type and global
@@ -86,178 +101,80 @@ There also are functions to use a global jlog session. This logger (when
 initialized) can be accessed from anywhere in the program, with out having
 direct access to the session object.
 
-_jlog_ on its own does not provide a useful implementations, however _libjayc_
-does provide simple implementations.
+_jlog_ on its own does not provide implementations, however _libjayc_
+does provide simple usable implementations.
 
 There is a _quiet_ session, that can be created (`jlog_session_quiet()`).
 This session however, does not do anything. It is there to use in components,
-that you don't want to log anything (f.ex. if _jcon\_client\_tcp_ does not
+that you don't want to log anything (f.ex. if _jcon\_thread_ does not
 get a logger session, it defaults to the global logger).
 
-#### Interface
-`_session_init()` functions from implementations will return a `jlog_t`
-pointer. This will be the session object to use in the interface functions.
+### jcon
+_jcon_ is a component that provides interfaces (and simple
+implementations) for connection handling.
 
-Since session objects are dynamically allocated memory, the session must
-be closed by calling `jlog_session_free()` whith the session object as
-parameter.
+Most are simple server/client systems, but there are more powerful
+modules.
 
-Logs messages are sent by using `jlog_log_message()` and `jlog_log_message_m()`.
-The `_m` suffix states, that the function is including source code
-information in its log messages.   
-The source code information are:
-* Filename (by using `__FILE__`)
-* Function name (by using `__func__`)
-* Line number (by using `__LINE__`)
+#### jcon_client
+This is a simple client interface, that connects to a server
+and communicates (depending on implementation).
 
-#### Global Session
-Created sessions can also be used as a _global session_. That means, that
-a logger can be used by calling the functions `jlog_global_log_message()` and
-`jlog_global_log_message_m()`.
+#### jcon_thread
+A threaded client. This runs in the background and calls
+a user defined handler for events (creation, data input, disconnect).
 
-For the global session to be usable, it has to be set with
-`jlog_global_session_set()` with a initialized session as parameter.   
-This can then be freed by using `jlog_global_session_free()`.
+#### jcon_server
+The server counterpart to _jcon\_client_.
+Listens to a server connection and creates _jcon\_client_ instances
+connected to clients.
 
-The global session can also be accessed by macros. There is a macro for
-each log type. These macros also directly pass the source code information
-to the function.   
-They are:
-* `JLOG_DEBUG()`
-* `JLOG_INFO()`
-* `JLOG_WARN()`
-* `JLOG_ERROR()`
-* `JLOG_CRITICAL()`
-* `JLOG_FATAL()`
+#### jcon_system
+A whole server system. The server gets manages in a thread
+and new connections are managed as _jcon\_thread_ instances.
 
-#### Log Types
-_jlog_ has 6 log types:
-* `JLOG_LOGTYPE_DEBUG`
-* `JLOG_LOGTYPE_INFO`
-* `JLOG_LOGTYPE_WARN`
-* `JLOG_LOGTYPE_ERROR`
-* `JLOG_LOGTYPE_CRITICAL`
-* `JLOG_LOGTYPE_FATAL`
+Also calls handlers for events.
 
-While _DEBUG_, _INFO_, _WARN_ and _ERROR_ are widely known; _CRITICAL_ and
-_FATAL_ are a bit more special-case.
+### jutil
+The _jutil_ component contains a few useful abstractions for
+functionality.
 
-If a log with the log type `JLOG_LOGTYPE_FATAL` gets sent (no matter what
-kind of implementation), the program will exit with return value
-`EXIT_FAILURE`.   
-`JLOG_LOGTYPE_CRITICAL` and `JLOG_LOGTYPE_ERROR` can work the same way. For
-that to happen, the macros `JLOG_EXIT_ATERROR` or `JLOG_EXIT_ATCRITICAL`
-have to be defined.
-```bash
-gcc -D JLOG_EXIT_ATCRITICAL ...
-gcc -D JLOG_EXIT_ATERROR ...
-```
+#### jutil_args
+A command line argument parser. Uses user defined parameter
+options with handler, to call when argument is passed.
 
-### jcon_client
-_jcon\_client_ is a interface for connector functionality.
-The concept is to create a template for implementations,
-that connect to a server using all types of communications
-and allow them to be controlled through a unified interface.
+#### jutil_linkedlist
+A implementation of a simple linked list for easy data storage.
 
-For example, there can be implementations using TCP, UDP, HTTP,
-or more specialized protocols, like syslog protocol, UNIX sockets,
-websockets, etc.
+#### jutil_thread
+A abstraction for thread handling (using pthread library).
 
-### Sessions
-`_session_init()` functions from implementations will return a `jcon_client_t`
-pointer. This will be the session object to use in the interface functions.
+#### jutil_crypto
+Contains functions to generate hashes.
 
-Since session objects are dynamically allocated memory, the session must
-be closed by calling `jcon_client_session_free()` whith the session object as
-parameter.
+(Encryptions also planned, but not currently available)
 
-After initialization, the client must be reset (meaning closed if connected,
-then connect). This is done using the function `jcon_client_reset()`.   
-Likewise a session is closed using `jcon_client_close()`. This will
-automatically done, when the session is freed.
+### jinfo
+The _jinfo_ component has functionality to get information
+about the library build.
 
-With the function `jcon_client_isConnected()` the connection state can be
-checked.
+`jinfo_build_version()` returns info about the library version
+and the datetime of the compilation.
 
-#### Data IO
-Data is sent and recieved as byte arrays. To send a message, the function
-`jcon_client_sendData()` is used. It needs the pointer to the array, as well
-as the size of the array.
+`jinfo_build_platform()` returns info about the OS and the
+architecture the library was compiled on.
 
-For recieving data, there is the function `jcon_client_newData()`, that returns
-if the client has data available to read.   
-If true, the data can be read using `jcon_client_recvData()`. Same as the
-send function, the recv function needs a byte array and its size.   
-It is also possible to give a NULL pointer for the byte array. In this case,
-the function will read from the client (as many bytes as stated in size
-parameter) but nothing can be done with the data.
+`jinfo_build_compiler()` returns the name and version of
+the compiler used.
 
-#### Getters
-_jcon\_client_ also has getters, to request information about the client.
+### jproc
+The _jproc_ component provides functionality for process
+handling.
 
-`jcon_client_getConnectionType()` will return a string representing the
-type of implementation (type of communication). This can be for example:
-* `TCP`
-* `UDP`
-* `UNIX_SOCK`
-* etc.
-
-`jcon_client_getReferenceString()` adds to that information about the
-connection. In case of a TCP connection, that would be IP address and port
-the client is connected to.   
-Example: `TCP:127.0.0.1:4443`
-
-### jcon_server
-_jcon\_server_ provides a unified interface, for different kinds of
-server systems.   
-Like _jcon\_client_ it can be implemented, to use many different
-communication types.
-
-#### Sessions
-`_session_init()` functions get defined by implementations and return
-a `jcon_server_t` pointer. Again, this will be the session pointer.
-
-To free a session, the `jcon_server_free()` function must be called
-with the session pointer as parameter.
-
-#### Client Connections
-_jcon\_server_ provides functions to check for available connections
-(`jcon_server_newConnection()`) and accept them and get a _jcon\_client_
-session in return (`jcon_server_acceptConnection()`).
-This client session is connected to the client and can be used to
-handle data transfer to the client.
-
-#### Getters
-_jcon\_server_ provides the same getters as _jcon\_client_,
-but uses the `jcon_server_` prefix.
-
-### jcon_thread
-_jcon\_thread_ is a threaded jcon_client. The thread runs in a loop and
-checks for new data and for disconnects.
-
-There are handlers that trigger, when there is new data available, or
-when the client disconnects.
-
-#### Interface
-_jcon\_thread_ gets initialized using `jcon_thread_init()`. It needs
-a client, the handlers, a logger and a context that gets passed to the
-handlers as a parameter.
-
-Likewise, the thread gets destroyed with `jcon_thread_free()`.   
-This tells the thread to stop and waits for it to exit.
-It then frees any memory allocated.
-
-The client does not get automatically destroyed. This has to be done either
-manually, after the thread was destroyed; or in the
-`jcon_thread_close_handler()`.
-
-#### Getters
-_jcon\_thread_ has getters to give information about its and the clients
-status.
-
-`jcon_thread_isRunning()` tells, if the thread is still running.   
-`jcon_thread_getConnectionType()` gives the connection type of the client.   
-`jcon_thread_getReferenceString()` gives the reference string of the client.
+For now it allows setting a exit handler, which is useful
+to free any global memory before exiting the program. Second
+you can set a signal handler to catch any signals recieved by
+the process.
 
 ## Using The Library
 
@@ -266,21 +183,21 @@ For an example to use the library, let's write a simple _Hello World_
 program, using the _jlog\_stdio_ logger. Let's call it `hw.c`.
 
 ```c
-#include <jlog_stdio.h>
-#include <stdlib.h>
+#include <jayc/jlog_stdio.h>
+#include <jayc/jproc.h>
 
 int main()
 {
   jlog_t *logger = jlog_stdio_session_init(JLOG_LOGTYPE_DEBUG);
   if(logger == NULL)
   {
-    return EXIT_FAILURE;
+    jproc_exit(-1);
   }
 
   jlog_log_message(logger, JLOG_LOGTYPE_INFO, "Hello World!");
   jlog_session_free(logger);
 
-  return EXIT_SUCCESS;
+  jproc_exit(0);
 }
 ```
 ### Compiling Programs With libJayC

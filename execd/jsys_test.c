@@ -22,8 +22,8 @@
 #include <jayc/jcon_server_tcp.h>
 #include <jayc/jcon_client.h>
 #include <jayc/jutil_crypto.h>
+#include <jayc/jutil_args.h>
 #include <jayc/jproc.h>
-#include <getopt.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -42,16 +42,6 @@
 #define JSYS_HASHCODE_SHA256  2
 #define JSYS_HASHCODE_SHA512  3
 
-static const struct option long_options[] =
-{
-  { "syslog", required_argument,  0, 's' },
-  { "ip",     required_argument,  0, 'i' },
-  { "port",   required_argument,  0, 'p' },
-  { "hash",   required_argument,  0, 0   },
-  { "help",   no_argument,        0, 'h' },
-  { NULL,     0,                  0, 0   }
-};
-
 typedef struct __jsys_data
 {
   char address[64];
@@ -64,6 +54,59 @@ typedef struct __jsys_data
 
   int run;
 } jsys_t;
+
+static char *argHandler_syslog(const char **data, size_t data_size);
+static char *argHandler_ip(const char **data, size_t data_size);
+static char *argHandler_port(const char **data, size_t data_size);
+static char *argHandler_hashcode(const char **data, size_t data_size);
+
+static jutil_args_option_t options[] =
+{
+  {
+    "jlog_syslog",
+    "System will use jlog_syslog to log information.",
+    "syslog",
+    0,
+    &argHandler_syslog,
+    0,
+    1,
+    0,
+    0
+  },
+  {
+    "Server address",
+    "Address the server should bind to.",
+    "address",
+    'a',
+    &argHandler_ip,
+    0,
+    1,
+    0,
+    0
+  },
+  {
+    "Server port",
+    "Port number the server should bind to.",
+    "port",
+    'p',
+    &argHandler_port,
+    0,
+    1,
+    0,
+    0
+  },
+  {
+    "Hash Code",
+    "Defines the hash algorithm that should be used.",
+    "hash",
+    0,
+    &argHandler_hashcode,
+    0,
+    1,
+    0,
+    0
+  }
+};
 
 static jsys_t g_data = 
 {
@@ -78,19 +121,13 @@ static jsys_t g_data =
 
 static void jsys_signalHandler(int dummy, void *ctx);
 
-static void jsys_paramMgr(int argc, char *argv[]);
-
-static void jsys_errorUsage(const char *name);
-
-static void jsys_setSyslog(const char *name, const char *facility);
-
 static void jsys_dataHandler(void *ctx, jcon_client_t *client);
 
 static void jsys_createHandler(void *ctx, const char *ref_string);
 
 static void jsys_closeHandler(void *ctx, const char *ref_string);
 
-static void jsys_cleanup(void *ctx);
+static void jsys_cleanup(int exit_value, void *ctx);
 
 //------------------------------------------------------------------------------
 //
@@ -99,7 +136,20 @@ int main(int argc, char *argv[])
   jproc_exit_setHandler(jsys_cleanup, NULL);
   jproc_signal_setHandler(SIGINT, jsys_signalHandler, NULL);
 
-  jsys_paramMgr(argc, argv);
+  if(jutil_args_process(argc, argv, (jutil_args_option_t *)options, 4) == 0)
+  {
+    jproc_exit(EXIT_FAILURE);
+  }
+
+  if(g_data.logger == NULL)
+  {
+    g_data.logger = jlog_stdio_session_init(JLOG_LOGTYPE_DEBUG);
+    if(g_data.logger == NULL)
+    {
+      jproc_exit(EXIT_FAILURE);
+    }
+  }
+
   jlog_global_session_set(g_data.logger);
 
   g_data.server = jcon_server_tcp_session_init(g_data.address, g_data.port, g_data.logger);
@@ -140,98 +190,6 @@ void jsys_signalHandler(int dummy, void *ctx)
 {
   JLOG_DEBUG("Shutdown signal recieved.");
   g_data.run = 0;
-}
-
-//------------------------------------------------------------------------------
-//
-void jsys_paramMgr(int argc, char *argv[])
-{
-  // --syslog <facility>
-  // --ip <ip-address> (Default: localhost)
-  // --port <port> (Default: 1234)
-  // --hash <hash-enum> (Default: 1)
-  // --help
-
-  struct option *op = NULL;
-  int index = -1;
-  int opt;
-  while( (opt = getopt_long(argc, argv, "s:i:p:", long_options, &index)) != -1)
-  {
-    switch(opt)
-    {
-      case 0:
-      {
-        op = (struct option *)&(long_options[index]);
-        if(strcmp(op->name, "hash"))
-        {
-          jsys_errorUsage(argv[0]);
-        }
-
-        g_data.hash_code = atoi(optarg);
-        break;
-      }
-
-      case 's':
-      {
-        jsys_setSyslog(argv[0], optarg);
-        break;
-      }
-      case 'i':
-      {
-        memcpy(g_data.address, optarg, sizeof(g_data.address));
-        break;
-      }
-      case 'p':
-      {
-        g_data.port = atoi(optarg);
-        break;
-      }
-      case 'h':
-      {
-        jsys_errorUsage(argv[0]);
-      }
-
-      default:
-      {
-        jsys_errorUsage(argv[0]);
-      }
-    }
-  }
-
-  if(g_data.logger == NULL)
-  {
-    g_data.logger = jlog_stdio_session_init(JLOG_LOGTYPE_DEBUG);
-  }
-}
-
-//------------------------------------------------------------------------------
-//
-void jsys_errorUsage(const char *name)
-{
-  fprintf(stderr, "Usage: %s [--syslog/-s <syslog-facility>] [--ip/-i <ip-address>] [--port/-ip <port>] [--hash <hash-code>] [--help/-h] .\n", name);
-  exit(EXIT_FAILURE);
-}
-
-//------------------------------------------------------------------------------
-//
-void jsys_setSyslog(const char *name, const char *facility)
-{
-  int fac;
-
-  if(strcmp(facility, "user") == 0)
-  {
-    fac = LOG_USER;
-  }
-  else if(strcmp(facility, "daemon") == 0)
-  {
-    fac = LOG_DAEMON;
-  }
-  else
-  {
-    jsys_errorUsage(name);
-  }
-
-  g_data.logger = jlog_syslog_session_init(JLOG_LOGTYPE_DEBUG, name, fac);
 }
 
 //------------------------------------------------------------------------------
@@ -306,7 +264,7 @@ void jsys_closeHandler(void *ctx, const char *ref_string)
 
 //------------------------------------------------------------------------------
 //
-void jsys_cleanup(void *ctx)
+void jsys_cleanup(int exit_value, void *ctx)
 {
   if(g_data.system)
   {
@@ -322,4 +280,74 @@ void jsys_cleanup(void *ctx)
   {
     jlog_session_free(g_data.logger);
   }
+}
+
+//------------------------------------------------------------------------------
+//
+char *argHandler_syslog(const char **data, size_t data_size)
+{
+  int fac;
+  if(strcmp(data[0], "user") == 0)
+  {
+    fac = LOG_USER;
+  }
+  else if(strcmp(data[0], "daemon") == 0)
+  {
+    fac = LOG_DAEMON;
+  }
+  else
+  {
+    return jutil_args_error("Invalid value for facility [%s].", data[0]);
+  }
+
+  g_data.logger = jlog_syslog_session_init(JLOG_LOGTYPE_DEBUG, "jsys_test", fac);
+  if(g_data.logger == NULL)
+  {
+    return jutil_args_error("Logger could not be initialized.");
+  }
+
+  return NULL;
+}
+
+//------------------------------------------------------------------------------
+//
+char *argHandler_ip(const char **data, size_t data_size)
+{
+  if(strlen(data[0]) >= sizeof(g_data.address))
+  {
+    return jutil_args_error("Address has invalid size [%d : %s].", strlen(data[0]), data[0]);
+  }
+
+  memset(g_data.address, 0, sizeof(g_data.address));
+  memcpy(g_data.address, data[0], sizeof(g_data.address));
+
+  return NULL;
+}
+
+//------------------------------------------------------------------------------
+//
+char *argHandler_port(const char **data, size_t data_size)
+{
+  uint16_t port = atoi(data[0]);
+  if(port == 0)
+  {
+    return jutil_args_error("Invalid value for port [%u].", port);
+  }
+
+  g_data.port = port;
+  return NULL;
+}
+
+//------------------------------------------------------------------------------
+//
+char *argHandler_hashcode(const char **data, size_t data_size)
+{
+  int hashcode = atoi(data[0]);
+  if(hashcode > 3)
+  {
+    return jutil_args_error("Invalid value for hash code [%d].", hashcode);
+  }
+
+  g_data.hash_code = hashcode;
+  return NULL;
 }

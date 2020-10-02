@@ -146,6 +146,11 @@ options with handler, to call when argument is passed.
 #### jutil_linkedlist
 A implementation of a simple linked list for easy data storage.
 
+#### jutil_map
+A string indexed map. Based on _jutil\_linkedlist_, so not
+really an efficient approach. But it works and is simple
+to use.
+
 #### jutil_thread
 A abstraction for thread handling (using pthread library).
 

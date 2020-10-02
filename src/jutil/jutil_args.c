@@ -53,13 +53,13 @@ static void jutil_args_printHelp(jutil_args_ctx_t *ctx);
 #ifdef JUTIL_NO_DEBUG /* Allow to disable debug messages at compile time. */
   #define DEBUG(fmt, ...)
 #else
-  #define DEBUG(fmt, ...) JLOG_DEBUG(__FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+  #define DEBUG(fmt, ...) JLOG_DEBUG(fmt, ##__VA_ARGS__)
 #endif
-#define INFO(fmt, ...) JLOG_INFO(__FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...) JLOG_WARN(__FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) JLOG_ERROR(__FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define CRITICAL(fmt, ...)JLOG_CRITICAL(__FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define FATAL(fmt, ...) JLOG_FATAL(__FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define INFO(fmt, ...) JLOG_INFO(fmt, ##__VA_ARGS__)
+#define WARN(fmt, ...) JLOG_WARN(fmt, ##__VA_ARGS__)
+#define ERROR(fmt, ...) JLOG_ERROR(fmt, ##__VA_ARGS__)
+#define CRITICAL(fmt, ...)JLOG_CRITICAL(fmt, ##__VA_ARGS__)
+#define FATAL(fmt, ...) JLOG_FATAL(fmt, ##__VA_ARGS__)
 
 //------------------------------------------------------------------------------
 //
@@ -89,15 +89,10 @@ int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, siz
   if(opt_number == 0)
   {
     DEBUG("No options available.");
-    return false;
+    return true;
   }
 
-  /* Check if CLI arguments available. */
-  if(argc == 1)
-  {
-    DEBUG("No CLI arguments available.");
-    return false;
-  }
+  DEBUG("Processing [%lu] options.", opt_number);
 
   size_t ctr;
 
@@ -121,38 +116,45 @@ int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, siz
     options,
     opt_number
   };
-
-  /* Iterate through all options and process them. */
-  for(context.counter = 1; context.counter < context.argc; context.counter++)
+  /* Check if CLI arguments available. */
+  if(argc == 1)
   {
-    char *arg = context.argv[context.counter];
-
-    if(arg[0] == '-')
+    DEBUG("No CLI arguments available.");
+  }
+  else
+  {
+    /* Iterate through all options and process them. */
+    for(context.counter = 1; context.counter < context.argc; context.counter++)
     {
-      if(arg[1] == '-')
+      char *arg = context.argv[context.counter];
+
+      if(arg[0] == '-')
       {
-        /* Process long tag options. */
-        if(jutil_args_processLongTag(&context) == false)
+        if(arg[1] == '-')
         {
-          DEBUG("Failed processing long tag [ctr = %d].", context.counter);
-          return false;
+          /* Process long tag options. */
+          if(jutil_args_processLongTag(&context) == false)
+          {
+            DEBUG("Failed processing long tag [ctr = %d].", context.counter);
+            return false;
+          }
+        }
+        else
+        {
+        /* Process long tag options. */
+          if(jutil_args_processShortTag(&context) == false)
+          {
+            DEBUG("Failed processing short tag [ctr = %d].", context.counter);
+            return false;
+          }
         }
       }
       else
       {
-       /* Process long tag options. */
-        if(jutil_args_processShortTag(&context) == false)
-        {
-          DEBUG("Failed processing short tag [ctr = %d].", context.counter);
-          return false;
-        }
+        /* Options without tags not implemented yet. */
+        jutil_args_printError(&context, "Invalid tag [%s].", arg);
+        return false;
       }
-    }
-    else
-    {
-      /* Options without tags not implemented yet. */
-      jutil_args_printError(&context, "Invalid tag [%s].", arg);
-      return false;
     }
   }
 
@@ -293,7 +295,7 @@ int jutil_args_processLongTag(jutil_args_ctx_t *ctx)
   if(strcmp(tag, "help") == 0)
   {
     jutil_args_printHelp(ctx);
-    return true;
+    return false;
   }
 
   jutil_args_option_t *option = jutil_args_getLongOption(ctx, tag);
@@ -386,7 +388,50 @@ jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char *tag)
 //
 void jutil_args_printHelp(jutil_args_ctx_t *ctx)
 {
-  jutil_args_printUsage(ctx, stdout);
+  char *prog_name = ctx->argv[0];
+  
+  fprintf(stdout, "Usage: %s\n", prog_name);
+
+  size_t ctr;
+  for(ctr = 0; ctr < ctx->opt_number; ctr++)
+  {
+    jutil_args_option_t op = ctx->options[ctr];
+
+    fprintf(stdout, "%s :\n", op.name);
+
+    fprintf(stdout, "  [");
+
+    if(op.tag_long && op.tag_short)
+    {
+      fprintf(stdout, "-%c/--%s]", op.tag_short, op.tag_long);
+    }
+    else if(op.tag_long)
+    {
+      fprintf(stdout, "--%s]", op.tag_long);
+    }
+    else
+    {
+      fprintf(stdout, "-%c]", op.tag_short);
+    }
+
+    size_t ctr_args;
+    for(ctr_args = 0; ctr_args < op.data_required; ctr_args++)
+    {
+      fprintf(stdout, " <value-%lu>", ctr_args+1);
+    }
+
+    fprintf(stdout, "\n");
+
+    if(op.description)
+    {
+      fprintf(stdout, "%s", op.description);
+    }
+    else
+    {
+      fprintf(stdout, "No description found.");
+    }
+    fprintf(stdout, "\n\n");
+  }
 }
 
 //------------------------------------------------------------------------------

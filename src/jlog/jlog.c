@@ -11,6 +11,7 @@
 
 #include <jayc/jlog.h>
 #include <jayc/jlog_dev.h>
+#include <jayc/jproc.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -89,20 +90,20 @@ void jlog_log_message(struct __jlog_session *session, int log_type, const char *
 
   if(log_type == JLOG_LOGTYPE_FATAL)
   {
-    exit(EXIT_FAILURE);
+    jproc_exit(EXIT_FAILURE);
   }
 
   #ifdef JLOG_EXIT_ATCRITICAL
   if(log_type == JLOG_LOGTYPE_CRITICAL)
   {
-    exit(EXIT_FAILURE);
+    jproc_exit(EXIT_FAILURE);
   }
   #endif /* JLOG_EXIT_ATCRITICAL */
 
   #ifdef JLOG_EXIT_ATERROR
   if(log_type == JLOG_LOGTYPE_ERROR)
   {
-    exit(EXIT_FAILURE);
+    jproc_exit(EXIT_FAILURE);
   }
   #endif /* JLOG_EXIT_ATERROR */
 }
@@ -136,20 +137,20 @@ void jlog_log_message_m(struct __jlog_session *session, int log_type, const char
 
   if(log_type == JLOG_LOGTYPE_FATAL)
   {
-    exit(EXIT_FAILURE);
+    jproc_exit(EXIT_FAILURE);
   }
 
   #ifdef JLOG_EXIT_ATCRITICAL
   if(log_type == JLOG_LOGTYPE_CRITICAL)
   {
-    exit(EXIT_FAILURE);
+    jproc_exit(EXIT_FAILURE);
   }
   #endif /* JLOG_EXIT_ATCRITICAL */
 
   #ifdef JLOG_EXIT_ATERROR
   if(log_type == JLOG_LOGTYPE_ERROR)
   {
-    exit(EXIT_FAILURE);
+    jproc_exit(EXIT_FAILURE);
   }
   #endif /* JLOG_EXIT_ATERROR */
 }

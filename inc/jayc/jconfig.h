@@ -17,8 +17,6 @@
 #ifndef INCLUDE_JCONFIG_H
 #define INCLUDE_JCONFIG_H
 
-#include <jayc/jutil_map.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

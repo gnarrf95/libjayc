@@ -29,6 +29,7 @@
   * [jutil](#jutil)
   * [jinfo](#info)
   * [jproc](#jproc)
+  * [jconfig](#jconfig)
 * [Using the Library](#using-the-library)
   * [Example Program](#example-program)
   * [Compiling Programs with libJayC](#compiling-programs-with-libjayc)
@@ -180,6 +181,12 @@ For now it allows setting a exit handler, which is useful
 to free any global memory before exiting the program. Second
 you can set a signal handler to catch any signals recieved by
 the process.
+
+### jconfig
+_jconfig_ provides functionality for parsing configuration files.
+For now only simple _raw_ file formats are supported.
+
+In the future, more file types may be supported.
 
 ## Using The Library
 

@@ -209,7 +209,7 @@ const char *jcon_thread_getReferenceString(jcon_thread_t *session)
   if(session == NULL)
   {
     ERROR(NULL, "Session is NULL.");
-    return false;
+    return NULL;
   }
 
   return jcon_client_getReferenceString(session->client);

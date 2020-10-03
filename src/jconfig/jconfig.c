@@ -237,7 +237,7 @@ int jconfig_raw_loadFromFile(jconfig_t *table, const char *filename)
     char key[2048];
     char data[2048];
 
-    if(sscanf(lineptr, "%[^=]=%[^\n]\n", key, data) != 2)
+    if(sscanf(lineptr, "%2047[^=]=%2047[^\n]\n", key, data) != 2)
     {
       free(lineptr);
       continue;

@@ -13,23 +13,11 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <jayc/jconfig.h>
+#include <jayc/jconfig_dev.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-
-/**
- * @brief Config object.
- */
-struct __jconfig_table
-{
-  /* Table: Should be a map, that can access datapoints with an string index.
-     Index keys should be stored in the format "server.address.ip", to allow
-     nested data. This should make it compatible with most config file
-     formats. */
-  
-  jutil_map_t *map; /**< Config data table. */
-};
 
 //------------------------------------------------------------------------------
 //

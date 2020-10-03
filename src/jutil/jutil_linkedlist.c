@@ -62,6 +62,11 @@ jutil_linkedlist_t *jutil_linkedlist_allocNode()
 //
 void *jutil_linkedlist_getData(jutil_linkedlist_t *node)
 {
+  if(node == NULL)
+  {
+    return NULL;
+  }
+
   return node->data;
 }
 

@@ -2,6 +2,7 @@
 [![GitHub last commit](https://img.shields.io/github/last-commit/gnarrf95/libjayc?style=flat-square)]()
 [![GitHub issues](https://img.shields.io/github/issues/gnarrf95/libjayc?style=flat-square)](https://github.com/gnarrf95/libjayc/issues)
 [![GitHub](https://img.shields.io/github/license/gnarrf95/libjayc?style=flat-square)](https://github.com/gnarrf95/libjayc/blob/master/LICENSE)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/990a9602ea134bb583852ec2fc43c095)](https://www.codacy.com/manual/gnarrf95/libjayc/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=gnarrf95/libjayc&amp;utm_campaign=Badge_Grade)
 
 ```
  _  _  _        ___                _____ 

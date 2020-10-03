@@ -364,11 +364,10 @@ void jcon_tcp_shutdown(jcon_tcp_t *session)
   }
 
   int wait = true;
-  int ret;
   char buf[16];
   while(wait)
   {
-    ret = recv(session->file_descriptor, buf, sizeof(buf), 0);
+    int ret = recv(session->file_descriptor, buf, sizeof(buf), 0);
 
     if(ret == 0)
     {

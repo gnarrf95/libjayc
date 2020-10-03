@@ -377,11 +377,10 @@ void jcon_unix_shutdown(jcon_unix_t *session)
   }
 
   int wait = true;
-  int ret;
   char buf[16];
   while(wait)
   {
-    ret = recv(session->file_descriptor, buf, sizeof(buf), 0);
+    int ret = recv(session->file_descriptor, buf, sizeof(buf), 0);
 
     if(ret == 0)
     {

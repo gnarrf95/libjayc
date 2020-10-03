@@ -2,6 +2,7 @@
 [![GitHub last commit](https://img.shields.io/github/last-commit/gnarrf95/libjayc?style=flat-square)]()
 [![GitHub issues](https://img.shields.io/github/issues/gnarrf95/libjayc?style=flat-square)](https://github.com/gnarrf95/libjayc/issues)
 [![GitHub](https://img.shields.io/github/license/gnarrf95/libjayc?style=flat-square)](https://github.com/gnarrf95/libjayc/blob/master/LICENSE)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/990a9602ea134bb583852ec2fc43c095)](https://www.codacy.com/manual/gnarrf95/libjayc/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=gnarrf95/libjayc&amp;utm_campaign=Badge_Grade)
 
 ```
  _  _  _        ___                _____ 
@@ -29,6 +30,7 @@
   * [jutil](#jutil)
   * [jinfo](#info)
   * [jproc](#jproc)
+  * [jconfig](#jconfig)
 * [Using the Library](#using-the-library)
   * [Example Program](#example-program)
   * [Compiling Programs with libJayC](#compiling-programs-with-libjayc)
@@ -146,6 +148,11 @@ options with handler, to call when argument is passed.
 #### jutil_linkedlist
 A implementation of a simple linked list for easy data storage.
 
+#### jutil_map
+A string indexed map. Based on _jutil\_linkedlist_, so not
+really an efficient approach. But it works and is simple
+to use.
+
 #### jutil_thread
 A abstraction for thread handling (using pthread library).
 
@@ -175,6 +182,12 @@ For now it allows setting a exit handler, which is useful
 to free any global memory before exiting the program. Second
 you can set a signal handler to catch any signals recieved by
 the process.
+
+### jconfig
+_jconfig_ provides functionality for parsing configuration files.
+For now only simple _raw_ file formats are supported.
+
+In the future, more file types may be supported.
 
 ## Using The Library
 

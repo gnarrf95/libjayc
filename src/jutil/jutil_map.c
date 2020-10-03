@@ -10,19 +10,15 @@
  */
 
 #include <jayc/jutil_map.h>
+#include <jayc/jutil_linkedlist.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
 //==============================================================================
-// Define constants and structures.
+// Define structures.
 //
-
-/**
- * @brief The maximum size that an index can have.
- */
-#define JUTIL_MAP_SIZE_INDEX 128
 
 /**
  * @brief Object pointer.
@@ -31,15 +27,6 @@ struct __jutil_map
 {
   jutil_linkedlist_t *list; /**< Map based on linkedlist. */
 };
-
-/**
- * @brief Saves data and index in linked list.
- */
-typedef struct __jutil_map_data
-{
-  char index[JUTIL_MAP_SIZE_INDEX]; /**< Index string for node. */
-  void *data;                       /**< Node data. */
-} jutil_map_data_t;
 
 
 
@@ -308,6 +295,35 @@ void jutil_map_clear(jutil_map_t *map)
     jutil_map_data_t *map_data = jutil_linkedlist_pop(&map->list);
     free(map_data);
   }
+}
+
+//------------------------------------------------------------------------------
+//
+jutil_map_data_t *jutil_map_iterate(jutil_map_t *map, jutil_map_data_t *itr)
+{
+  if(map == NULL)
+  {
+    return NULL;
+  }
+
+  if(itr == NULL)
+  {
+    return (jutil_map_data_t *)jutil_linkedlist_getData(map->list);
+  }
+
+  jutil_linkedlist_t *node = jutil_map_getNode(map, itr->index);
+  if(node == NULL)
+  {
+    return NULL;
+  }
+
+  node = jutil_linkedlist_iterate(node);
+  if(node == NULL)
+  {
+    return NULL;
+  }
+
+  return (jutil_map_data_t *)jutil_linkedlist_getData(node);
 }
 
 

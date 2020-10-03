@@ -16,11 +16,25 @@
 #ifndef INCLUDE_JUTIL_MAP_H
 #define INCLUDE_JUTIL_MAP_H
 
-#include <jayc/jutil_linkedlist.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief The maximum size that an index can have.
+ */
+#define JUTIL_MAP_SIZE_INDEX 128
+
+/**
+ * @brief Key-value pair stored in map.
+ */
+typedef struct __jutil_map_data
+{
+  char index[JUTIL_MAP_SIZE_INDEX]; /**< Index string for node. */
+  void *data;                       /**< Node data. */
+} jutil_map_data_t;
 
 /**
  * @brief Object pointer.
@@ -122,6 +136,19 @@ size_t jutil_map_size(jutil_map_t *map);
  * @param map Map object to clear.
  */
 void jutil_map_clear(jutil_map_t *map);
+
+/**
+ * @brief Iterates through map and returns data pairs.
+ * 
+ * @param map Map to search.
+ * @param itr Iterator reference, function will
+ *            return next data pair.
+ *            If @c NULL , gets first data pair.
+ * 
+ * @return    Next pair in map.
+ * @return    @c NULL , if no new data or error occured.
+ */
+jutil_map_data_t *jutil_map_iterate(jutil_map_t *map, jutil_map_data_t *itr);
 
 #ifdef __cplusplus
 }

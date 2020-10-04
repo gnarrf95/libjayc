@@ -23,6 +23,10 @@
 extern "C" {
 #endif
 
+#define JUTIL_ARGS_OPTIONPARAM_MAXSIZE 16
+#define JUTIL_ARGS_OPTIONPARAM_END {NULL,NULL}
+#define JUTIL_ARGS_OPTIONPARAM_EMPTY {{NULL,NULL}}
+
 /**
  * @brief Function gets called when option is found.
  * 
@@ -39,6 +43,30 @@ extern "C" {
 typedef char *(*jutil_args_optionHandler_t)(const char **data, size_t data_size);
 
 /**
+ * @brief Gives general program information for help command.
+ */
+typedef struct __jutil_args_progDesc
+{
+  const char *prog_name;      /**< Name of the program. */
+  const char *description;    /**< Detailed description of program. */
+  const char *version_string; /**< Version of the program. */
+
+  const char *developer_info; /**< Name and contact of developer. */
+  const char *copyright_info; /**< Short copyright text.
+                                   Recommended format:
+                                   "Copyright (c) 2020 by <developer name>" */
+} jutil_args_progDesc_t;
+
+/**
+ * @brief Describes parameter for option.
+ */
+typedef struct __jutil_args_optionParam
+{
+  const char *name;         /**< Name of the parameter. */
+  const char *description;  /**< Description displayed in help. */
+} jutil_args_optionParam_t;
+
+/**
  * @brief Describes a command line option.
  * 
  * The system should be provided with an array of these
@@ -50,23 +78,27 @@ typedef char *(*jutil_args_optionHandler_t)(const char **data, size_t data_size)
  */
 typedef struct __jutil_args_option
 {
-  const char *name;                     /**< Short description of option (few words only). */
-  const char *description;              /**< Describes use of option in help. */
-  const char *tag_long;                 /**< Long version of option. F.ex. "--option". */
-  const char tag_short;                 /**< Short version of option. F.ex. "-o" .*/
+  const char *name;                       /**< Short description of option (few words only). */
+  const char *description;                /**< Describes use of option in help. */
+  const char *tag_long;                   /**< Long version of option. F.ex. "--option". */
+  const char tag_short;                   /**< Short version of option. F.ex. "-o" .*/
 
-  jutil_args_optionHandler_t handler;   /**< Handler to be called with string, when found. */
+  jutil_args_optionHandler_t handler;     /**< Handler to be called with string, when found. */
 
-  int no_tag;                           /**< For arguments without a tag.
-                                             If @c true , @c #tag_long , @c #tag_short and
-                                             @c #data_required are ignored.
-                                             NOT IMPLEMENTED YET! */
+  int no_tag;                             /**< For arguments without a tag.
+                                               If @c true , @c #tag_long , @c #tag_short and
+                                               @c #data_required are ignored.
+                                               NOT IMPLEMENTED YET! */
 
-  int data_required;                    /**< How many space seperated arguments should follow
-                                             this option. */
-  int mandatory;                        /**< If @c true , error if not found. */
+  // int data_required;                      /**< How many space seperated arguments should follow
+  //                                              this option. */
+  int mandatory;                          /**< If @c true , error if not found. */
+  int ctr_processed;                      /**< Used by library, set to @c 0 at initialization. */
 
-  int ctr_processed;                    /**< Used by library, set to @c 0 at initialization. */
+  const jutil_args_optionParam_t params
+    [JUTIL_ARGS_OPTIONPARAM_MAXSIZE];     /**< Parameters required for option.
+                                               Last element must be followed
+                                               with @c #JUTIL_ARGS_OPTIONPARAM_END. */
 } jutil_args_option_t;
 
 /**
@@ -93,6 +125,7 @@ char *jutil_args_error(const char *fmt, ...);
 /**
  * @brief Iterates through the options and processes input.
  * 
+ * @param prog_desc   Description of program.
  * @param argc        Number of CLI arguments.
  * @param argv        CLI argument array.
  * @param options     Array of options.
@@ -101,7 +134,7 @@ char *jutil_args_error(const char *fmt, ...);
  * @return            @c true , if processing was successful.
  * @return            @c false , if error occured.
  */
-int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, size_t opt_number);
+int jutil_args_process(jutil_args_progDesc_t *prog_desc, int argc, char *argv[], jutil_args_option_t *options, size_t opt_number);
 
 #ifdef __cplusplus
 }

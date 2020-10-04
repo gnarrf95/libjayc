@@ -196,21 +196,43 @@ static int jaycConf_processCMD(char *cmd);
 // Define global data.
 //
 
+static jutil_args_progDesc_t prog_desc =
+{
+  "jayc-conf",
+
+  "Program that can edit configurations and save/read " \
+  "to/from files.",
+
+  "v0.5-alpha",
+  "Manuel Nadji (https://github.com/gnarrf95)",
+  "Copyright (c) 2020 by Manuel Nadji"
+};
+
 /**
  * @brief Option structures for defining CLI options for jutil_args.
  */
 static jutil_args_option_t jaycConf_argOptions[] =
 {
   {
-    "Filepath",
+    "Config file",
     "File to open and format to parse.",
     "file",
     'f',
     &jaycConf_argFile,
     0,
-    2,
     0,
-    0
+    0,
+    {
+      {
+        "filename",
+        "File to read config from."
+      },
+      {
+        "file-format",
+        "Format which to parse."
+      },
+      JUTIL_ARGS_OPTIONPARAM_END
+    }
   },
   {
     "Debug output",
@@ -221,7 +243,7 @@ static jutil_args_option_t jaycConf_argOptions[] =
     0,
     0,
     0,
-    0
+    JUTIL_ARGS_OPTIONPARAM_EMPTY
   }
 };
 
@@ -248,6 +270,7 @@ int main(int argc, char *argv[])
   jaycConf_initData();
   if(jutil_args_process
     (
+      &prog_desc,
       argc,
       argv,
       jaycConf_argOptions,

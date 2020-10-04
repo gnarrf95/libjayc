@@ -159,6 +159,11 @@ void jlog_log_message_m(struct __jlog_session *session, int log_type, const char
 //
 void jlog_global_session_set(struct __jlog_session *session)
 {
+  if(global_session)
+  {
+    jlog_session_free(global_session);
+  }
+
   global_session = session;
 }
 

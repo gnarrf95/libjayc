@@ -24,7 +24,7 @@
 
 typedef struct __jutil_args_context
 {
-  char *prog_name;
+  jutil_args_progDesc_t *prog_desc;
 
   int argc;
   char **argv;
@@ -50,6 +50,15 @@ typedef struct __jutil_args_context
 //==============================================================================
 // Declare internal funcions.
 //
+
+/**
+ * @brief Gets size of option parameter array.
+ * 
+ * @param params  Parameters to count.
+ * 
+ * @return        Number of parameters in array.
+ */
+static size_t jutil_args_optionParam_getSize(const jutil_args_optionParam_t *params);
 
 /**
  * @brief Checks for correctness of option.
@@ -171,7 +180,7 @@ char *jutil_args_error(const char *fmt, ...)
 
 //------------------------------------------------------------------------------
 //
-int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, size_t opt_number)
+int jutil_args_process(jutil_args_progDesc_t *prog_desc, int argc, char *argv[], jutil_args_option_t *options, size_t opt_number)
 {
   /* Check if options available. */
   if(opt_number == 0)
@@ -197,7 +206,7 @@ int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, siz
   /* Context to pass to sub-functions. */
   jutil_args_ctx_t context =
   {
-    argv[0],
+    prog_desc,
     argc,
     argv,
     0,
@@ -275,6 +284,34 @@ int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, siz
 
 //------------------------------------------------------------------------------
 //
+size_t jutil_args_optionParam_getSize(const jutil_args_optionParam_t *params)
+{
+  if(params == NULL)
+  {
+    return 0;
+  }
+
+  /* Check for JUTIL_ARGS_OPTIONPARAM_EMPTY */
+  if(params[0].name == NULL && params[0].description == NULL)
+  {
+    return 0;
+  }
+
+  size_t ctr;
+  for(ctr = 0; ctr < JUTIL_ARGS_OPTIONPARAM_MAXSIZE; ctr++)
+  {
+    /* Check for JUTIL_ARGS_OPTIONPARAM_END */
+    if(params[ctr].name == NULL && params[ctr].description == NULL)
+    {
+      return ctr;
+    }
+  }
+
+  return JUTIL_ARGS_OPTIONPARAM_MAXSIZE;
+}
+
+//------------------------------------------------------------------------------
+//
 int jutil_args_validateOption(jutil_args_option_t option)
 {
   if(option.name == NULL)
@@ -287,6 +324,22 @@ int jutil_args_validateOption(jutil_args_option_t option)
   {
     ERROR("Options without tags not implemented yet.");
     return false;
+  }
+
+  size_t size_param = jutil_args_optionParam_getSize(option.params);
+  size_t ctr_param;
+  for
+  (
+    ctr_param = 0;
+    ctr_param < size_param;
+    ctr_param++
+  )
+  {
+    if(option.params[ctr_param].name == NULL)
+    {
+      ERROR("Option parameter needs a name.");
+      return false;
+    }
   }
 
   if(option.handler == NULL)
@@ -329,12 +382,11 @@ int jutil_args_processShortTag(jutil_args_ctx_t *ctx)
   }
 
   char **data = NULL;
-  size_t data_size = 0;
+  size_t data_size = jutil_args_optionParam_getSize(option->params);
 
   /* Read additional arguments for option. */
-  if(option->data_required)
+  if(data_size)
   {
-    data_size = option->data_required;
     data = (char **)malloc(sizeof(char *) * data_size);
     if(data == NULL)
     {
@@ -400,12 +452,11 @@ int jutil_args_processLongTag(jutil_args_ctx_t *ctx)
   }
 
   char **data = NULL;
-  size_t data_size = 0;
+  size_t data_size = jutil_args_optionParam_getSize(option->params);
 
   /* Read additional arguments for option. */
-  if(option->data_required)
+  if(data_size)
   {
-    data_size = option->data_required;
     data = (char **)malloc(sizeof(char *) * data_size);
     if(data == NULL)
     {
@@ -508,10 +559,12 @@ void jutil_args_printHelp(jutil_args_ctx_t *ctx)
       fprintf(stdout, "-%c]", op.tag_short);
     }
 
+    size_t size_args = jutil_args_optionParam_getSize(op.params);
+
     size_t ctr_args;
-    for(ctr_args = 0; ctr_args < op.data_required; ctr_args++)
+    for(ctr_args = 0; ctr_args < size_args; ctr_args++)
     {
-      fprintf(stdout, " <value-%lu>", ctr_args+1);
+      fprintf(stdout, " <%s>", op.params[ctr_args].name);
     }
 
     fprintf(stdout, "\n");
@@ -556,10 +609,12 @@ void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)
       fprintf(output, "-%c]", op.tag_short);
     }
 
+    size_t size_args = jutil_args_optionParam_getSize(op.params);
+
     size_t ctr_args;
-    for(ctr_args = 0; ctr_args < op.data_required; ctr_args++)
+    for(ctr_args = 0; ctr_args < size_args; ctr_args++)
     {
-      fprintf(output, " <value-%lu>", ctr_args+1);
+      fprintf(stdout, " <%s>", op.params[ctr_args].name);
     }
 
     fprintf(output, "\n");

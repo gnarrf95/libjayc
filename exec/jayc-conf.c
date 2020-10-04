@@ -28,12 +28,21 @@
 // Define constants.
 //
 
+/*
+ * Exit values for jproc_exit().
+ */
 #define JAYCCONF_EXIT_SUCCESS 0
 #define JAYCCONF_EXIT_FAILURE 1
 #define JAYCCONF_EXIT_SIGINT  2
 
+/*
+ * File formats to read config.
+ */
 #define JAYCCONF_FORMAT_RAW 0
 
+/*
+ * CLI commands to edit config.
+ */
 #define JAYCCONF_CMD_LOAD   "lod"
 #define JAYCCONF_CMD_SAVE   "sav"
 #define JAYCCONF_CMD_SET    "set"
@@ -42,6 +51,9 @@
 #define JAYCCONF_CMD_DUMP   "dmp"
 #define JAYCCONF_CMD_EXIT   "exit"
 
+/*
+ * States of CLI input parsing.
+ */
 #define JAYCCONF_CMDSTATE_CMD    0
 #define JAYCCONF_CMDSTATE_PARAM1 1
 #define JAYCCONF_CMDSTATE_PARAM2 2
@@ -49,7 +61,7 @@
 
 
 //==============================================================================
-// Define structures and log macros.
+// Define structures.
 //
 
 typedef struct __jaycConf_data
@@ -59,8 +71,16 @@ typedef struct __jaycConf_data
 
   jconfig_t *config_data;
 
+  int log_level;
+
   int run;
 } jaycConf_data_t;
+
+
+
+//==============================================================================
+// Define log macros.
+//
 
 #define DEBUG(fmt, ...) JLOG_DEBUG(fmt, ##__VA_ARGS__)
 #define INFO(fmt, ...) JLOG_INFO(fmt, ##__VA_ARGS__)
@@ -116,6 +136,20 @@ static void jaycConf_signalHandler(int signal_number, void *ctx);
 static char *jaycConf_argFile(const char **data, size_t data_size);
 
 /**
+ * @brief Handles debug argument.
+ * 
+ * By default no debug logs are shown.
+ * With argument "--debug" they can be enabled.
+ * 
+ * @param data      Empty array.
+ * @param data_size Size of array (should be 0).
+ * 
+ * @return          @c NULL , if everything worked.
+ * @return          Error message if something went wrong.
+ */
+static char *jaycConf_argDebug(const char **data, size_t data_size);
+
+/**
  * @brief Loads config data from file.
  * 
  * @param file    File path.
@@ -136,6 +170,14 @@ static int jaycConf_loadConfig(const char *file, int format);
  * @return        @c false , if error occured.
  */
 static int jaycConf_saveConfig(const char *file, int format);
+
+/**
+ * @brief Prints all config data.
+ * 
+ * @return        @c true , if successful.
+ * @return        @c false , if error occured.
+ */
+static int jaycConf_dumpConfig();
 
 /**
  * @brief Processing CMD read from stdin.
@@ -161,12 +203,23 @@ static jutil_args_option_t jaycConf_argOptions[] =
 {
   {
     "Filepath",
-    "File to open and parse.",
+    "File to open and format to parse.",
     "file",
     'f',
     &jaycConf_argFile,
     0,
     2,
+    0,
+    0
+  },
+  {
+    "Debug output",
+    "Enable debug output.",
+    "debug",
+    0,
+    &jaycConf_argDebug,
+    0,
+    0,
     0,
     0
   }
@@ -180,6 +233,7 @@ static jaycConf_data_t g_data =
   { 0 },
   JAYCCONF_FORMAT_RAW,
   NULL,
+  JLOG_LOGTYPE_INFO,
   true
 };
 
@@ -192,11 +246,23 @@ static jaycConf_data_t g_data =
 int main(int argc, char *argv[])
 {
   jaycConf_initData();
-  if(jutil_args_process(argc, argv, jaycConf_argOptions, 1) == 0)
+  if(jutil_args_process
+    (
+      argc,
+      argv,
+      jaycConf_argOptions,
+      sizeof(jaycConf_argOptions)/sizeof(jutil_args_option_t)
+    ) == false)
   {
-    ERROR("jutil_args_process() failed.");
     jproc_exit(JAYCCONF_EXIT_FAILURE);
   }
+
+  jlog_t *logger = jlog_stdio_session_init(g_data.log_level);
+  if(logger == NULL)
+  {
+    jproc_exit(JAYCCONF_EXIT_FAILURE);
+  }
+  jlog_global_session_set(logger);
 
   if(strcmp(g_data.filename, ""))
   {
@@ -235,13 +301,15 @@ int main(int argc, char *argv[])
       jproc_exit(JAYCCONF_EXIT_FAILURE);
     }
 
-    if(jaycConf_processCMD(cmd_str) == false)
-    {
-      ERROR("jaycConf_processCMD() failed.");
-      free(cmd_buf);
-      free(cmd_str);
-      jproc_exit(JAYCCONF_EXIT_FAILURE);
-    }
+    jaycConf_processCMD(cmd_str);
+
+    // if(jaycConf_processCMD(cmd_str) == false)
+    // {
+    //   ERROR("jaycConf_processCMD() failed.");
+    //   free(cmd_buf);
+    //   free(cmd_str);
+    //   jproc_exit(JAYCCONF_EXIT_FAILURE);
+    // }
 
     free(cmd_buf);
     free(cmd_str);
@@ -262,14 +330,14 @@ int main(int argc, char *argv[])
 //
 void jaycConf_initData()
 {
-  jlog_global_session_set(jlog_stdio_session_init(JLOG_LOGTYPE_DEBUG));
-
   jproc_exit_setHandler(jaycConf_exitHandler, NULL);
   jproc_signal_setHandler(SIGINT, jaycConf_signalHandler, NULL);
 
   memset(g_data.filename, 0, sizeof(g_data.filename));
 
   g_data.config_data = jconfig_init();
+
+  g_data.log_level = JLOG_LOGTYPE_INFO;
 }
 
 //------------------------------------------------------------------------------
@@ -327,6 +395,19 @@ char *jaycConf_argFile(const char **data, size_t data_size)
 
 //------------------------------------------------------------------------------
 //
+char *jaycConf_argDebug(const char **data, size_t data_size)
+{
+  if(data_size != 0)
+  {
+    return jutil_args_error("[--debug] Should have no arguments.");
+  }
+
+  g_data.log_level = JLOG_LOGTYPE_DEBUG;
+  return NULL;
+}
+
+//------------------------------------------------------------------------------
+//
 int jaycConf_loadConfig(const char *file, int format)
 {
   if(file == NULL)
@@ -373,6 +454,20 @@ int jaycConf_saveConfig(const char *file, int format)
 
 //------------------------------------------------------------------------------
 //
+int jaycConf_dumpConfig()
+{
+  jconfig_iterator_t *itr = NULL;
+
+  while( (itr = jconfig_iterate(g_data.config_data, itr)) != NULL )
+  {
+    printf("\"%s\" = \"%s\"\n", jconfig_itr_getKey(itr), jconfig_itr_getData(itr));
+  }
+  printf("\n");
+  return true;
+}
+
+//------------------------------------------------------------------------------
+//
 int jaycConf_processCMD(char *cmd)
 {
   /*
@@ -385,8 +480,6 @@ int jaycConf_processCMD(char *cmd)
    * - dmp                  (Prints all config data)
    * - exit                 (Exit Program)
    */
-
-
 
   char cmd_main[16] = { 0 };
   char cmd_par1[128] = { 0 };
@@ -404,7 +497,7 @@ int jaycConf_processCMD(char *cmd)
       {
         if(strlen(cmd_buf) >= sizeof(cmd_main))
         {
-          DEBUG("Size of CMD name too long.");
+          INFO("Size of CMD name too long.");
           return false;
         }
 
@@ -415,7 +508,7 @@ int jaycConf_processCMD(char *cmd)
       {
         if(strlen(cmd_buf) >= sizeof(cmd_par1))
         {
-          DEBUG("Size of parameter1 too long.");
+          INFO("Size of parameter1 too long.");
           return false;
         }
 
@@ -426,7 +519,7 @@ int jaycConf_processCMD(char *cmd)
       {
         if(strlen(cmd_buf) >= sizeof(cmd_par2))
         {
-          DEBUG("Size of parameter2 too long.");
+          INFO("Size of parameter2 too long.");
           return false;
         }
 
@@ -436,9 +529,9 @@ int jaycConf_processCMD(char *cmd)
 
       default:
       {
-        // ERROR("Invalid value for JAYCCONF_CMDSTATE [%d].", state);
-        // return false;
-        break;
+        ERROR("Invalid value for JAYCCONF_CMDSTATE [%d].", state);
+        return false;
+        // break;
       }
     }
 
@@ -450,7 +543,7 @@ int jaycConf_processCMD(char *cmd)
 
   if(strlen(cmd_main) == 0)
   {
-    ERROR("No command name.");
+    INFO("No command name.");
     return false;
   }
 
@@ -458,12 +551,12 @@ int jaycConf_processCMD(char *cmd)
   {
     if(strlen(cmd_par1) == 0)
     {
-      DEBUG("Missing arguments for command [%s].", cmd_main);
+      INFO("Missing arguments for command [%s].", cmd_main);
       return false;
     }
     if(strlen(cmd_par2) == 0)
     {
-      DEBUG("Missing arguments for command [%s].", cmd_main);
+      INFO("Missing arguments for command [%s].", cmd_main);
       return false;
     }
 
@@ -473,12 +566,12 @@ int jaycConf_processCMD(char *cmd)
   {
     if(strlen(cmd_par1) == 0)
     {
-      DEBUG("Missing arguments for command [%s].", cmd_main);
+      INFO("Missing arguments for command [%s].", cmd_main);
       return false;
     }
     if(strlen(cmd_par2) == 0)
     {
-      DEBUG("Missing arguments for command [%s].", cmd_main);
+      INFO("Missing arguments for command [%s].", cmd_main);
       return false;
     }
 
@@ -488,12 +581,12 @@ int jaycConf_processCMD(char *cmd)
   {
     if(strlen(cmd_par1) == 0)
     {
-      DEBUG("Missing arguments for command [%s].", cmd_main);
+      INFO("Missing arguments for command [%s].", cmd_main);
       return false;
     }
     if(strlen(cmd_par2) == 0)
     {
-      DEBUG("Missing arguments for command [%s].", cmd_main);
+      INFO("Missing arguments for command [%s].", cmd_main);
       return false;
     }
 
@@ -503,35 +596,35 @@ int jaycConf_processCMD(char *cmd)
   {
     if(strlen(cmd_par1) == 0)
     {
-      DEBUG("Missing arguments for command [%s].", cmd_main);
+      INFO("Missing arguments for command [%s].", cmd_main);
       return false;
     }
     if(strlen(cmd_par2) != 0)
     {
-      DEBUG("Too many arguments for command [%s].", cmd_main);
+      INFO("Too many arguments for command [%s].", cmd_main);
       return false;
     }
 
     const char *value = jconfig_datapoint_get(g_data.config_data, cmd_par1);
     if(value == NULL)
     {
-      DEBUG("Did not find key [%s].", cmd_par1);
+      INFO("Did not find key [%s].", cmd_par1);
       return false;
     }
 
-    printf("\"%s\" = \"%s\"\n", cmd_par1, value);
+    printf("\"%s\" = \"%s\"\n\n", cmd_par1, value);
     return true;
   }
   else if(strcmp(cmd_main, JAYCCONF_CMD_DELETE) == 0)
   {
     if(strlen(cmd_par1) == 0)
     {
-      DEBUG("Missing arguments for command [%s].", cmd_main);
+      INFO("Missing arguments for command [%s].", cmd_main);
       return false;
     }
     if(strlen(cmd_par2) != 0)
     {
-      DEBUG("Too many arguments for command [%s].", cmd_main);
+      INFO("Too many arguments for command [%s].", cmd_main);
       return false;
     }
 
@@ -539,8 +632,7 @@ int jaycConf_processCMD(char *cmd)
   }
   else if(strcmp(cmd_main, JAYCCONF_CMD_DUMP) == 0)
   {
-    ERROR("Command [%s] not implemented yet.", cmd_main);
-    return false;
+    return jaycConf_dumpConfig();
   }
   else if(strcmp(cmd_main, JAYCCONF_CMD_EXIT) == 0)
   {
@@ -548,5 +640,6 @@ int jaycConf_processCMD(char *cmd)
     return true;
   }
   
+  INFO("Invalid command [%s].", cmd_main);
   return false;
 }

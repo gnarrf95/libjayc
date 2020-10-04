@@ -275,13 +275,16 @@ int jconfig_raw_loadFromFile(jconfig_t *table, const char *filename)
   size_t line_size = 0;
   while(getline(&lineptr, &line_size, fd) > 0)
   {
-    char key[2048];
-    char data[2048];
+    char key[2048] = { 0 };
+    char data[2048] = { 0 };
 
     if(sscanf(lineptr, "%2047[^=]=%2047[^\n]\n", key, data) != 2)
     {
-      free(lineptr);
-      continue;
+      if(strlen(key) == 0)
+      {
+        free(lineptr);
+        continue;
+      }
     }
 
     free(lineptr);

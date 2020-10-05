@@ -196,6 +196,9 @@ static int jaycConf_processCMD(char *cmd);
 // Define global data.
 //
 
+/**
+ * @brief Program description for --help function.
+ */
 static jutil_args_progDesc_t prog_desc =
 {
   "jayc-conf",

@@ -3,19 +3,16 @@
 
 # Change compiler using "make COMPILER=<other-compiler>"
 COMPILER ?= gcc
-CC = $(COMPILER) -Wall -Werror -std=c11 -fPIC
+CC = $(COMPILER) -Wall -Werror -std=c11
 
 # ==============================================================================
-#Compiler and linker flags
+# Compiler and linker flags
 
 INC = -I inc/
 
-CF_MYSQL = `mysql_config --cflags`
 CFLAGS = $(INC)
 
-LDF_JANSSON = -ljansson
 LDF_PTHREAD = -lpthread
-LDF_MYSQL = `mysql_config --libs`
 LDF_CRYPTO = -lcrypto
 
 LDFLAGS = $(LDF_PTHREAD) $(LDF_CRYPTO)
@@ -28,18 +25,16 @@ LDFLAGS = $(LDF_PTHREAD) $(LDF_CRYPTO)
 # * "-D JLOG_EXIT_ATERROR" if program should exit at error log
 BUILD_FLAGS = -DJUTIL_NO_DEBUG
 
-# ==============================================================================
-# Sources
+HEADERS_LIB = $(wildcard inc/jayc/*.h)
+HEADERS_INT = $(wildcard inc/*.h)
 
-HEADERS_INST = $(wildcard inc/jayc/*.h)
-HEADERS = $(wildcard inc/*.h) $(HEADERS_INST)
+HEADERS = $(HEADERS_LIB) $(HEADERS_INT)
 
 # Get all subdirectories of src
 # https://stackoverflow.com/questions/13897945/wildcard-to-obtain-list-of-all-directories
 SRCDIRS = $(sort $(dir $(wildcard src/*/)))
 
 SRC = $(foreach dir,$(SRCDIRS),$(wildcard $(dir)*.c))
-SRC_TESTS = $(wildcard tests/*.c)
 SRC_EXEC = $(wildcard exec/*.c)
 SRC_EXECD = $(wildcard execd/*.c)
 
@@ -54,7 +49,6 @@ OBJDIRS = $(sort $(dir $(OBJ)))
 # Targets
 
 TARGET_LIBJAYC = build/lib/libjayc.so
-# TARGET_TESTS = $(subst tests,build/tests,$(SRC_TESTS:.c=))
 TARGET_EXEC = $(subst exec,build/bin,$(SRC_EXEC:.c=))
 TARGET_EXECD = $(subst execd,build/sbin,$(SRC_EXECD:.c=))
 
@@ -64,15 +58,12 @@ TARGET_EXECD = $(subst execd,build/sbin,$(SRC_EXECD:.c=))
 PREFIX ?= /usr/local
 
 HEADERS_INSTALLED = $(subst inc/jayc/,$(PREFIX)/include/jayc/,$(HEADERS_INST))
-TARGET_LIBJAYC_INSTALLED = $(PREFIX)/lib/$(subst build/lib/,,$(TARGET_LIBJAYC))
-TARGET_EXEC_INSTALLED = $(PREFIX)/bin/$(subst build/bin/,,$(TARGET_EXEC))
-TARGET_EXECD_INSTALLED = $(PREFIX)/sbin/$(subst build/sbin/,,$(TARGET_EXECD))
+TARGET_LIBJAYC_INSTALLED = $(subst build/lib,$(PREFIX)/lib,$(TARGET_LIBJAYC))
+TARGET_EXEC_INSTALLED = $(subst build/bin,$(PREFIX)/bin,$(TARGET_EXEC))
+TARGET_EXECD_INSTALLED = $(subst build/bin,$(PREFIX)/bin,$(TARGET_EXECD))
 
 # ==============================================================================
 # Build recipes
-
-srcs:
-	@echo $(OBJDIRS)
 
 # ------------------------------------------------------------------------------
 # Compile Tests
@@ -82,19 +73,19 @@ check: $(OBJ)
 # ------------------------------------------------------------------------------
 # Build all parts of the project
 .PHONY: all
-all: libs
+all: libs bins
 
 # ------------------------------------------------------------------------------
 # Compile Executables
 .PHONY: bins
-bins: $(TARGET_EXEC) $(TARGET_EXECD) $(TARGET_LIBJAYC_INSTALLED)
+bins: $(TARGET_EXEC) $(TARGET_EXECD)
 	@echo "All executables done."
 
-build/bin/%: exec/%.c $(TARGET_LIBJAYC_INSTALLED)
-	$(CC) $< -o $@ $(INC) -L$(PREFIX)/lib/ -ljayc
+build/bin/%: exec/%.c $(TARGET_LIBJAYC)
+	$(CC) $< -o $@ $(INC) -Lbuild/lib/ -ljayc
 
-build/sbin/%: execd/%.c $(TARGET_LIBJAYC_INSTALLED)
-	$(CC) $< -o $@ $(INC) -L$(PREFIX)/lib/ -ljayc
+build/sbin/%: execd/%.c $(TARGET_LIBJAYC)
+	$(CC) $< -o $@ $(INC) -Lbuild/lib/ -ljayc
 
 # ------------------------------------------------------------------------------
 # Compile Library
@@ -108,14 +99,12 @@ $(TARGET_LIBJAYC): $(OBJ)
 # ------------------------------------------------------------------------------
 # Library Installation
 .PHONY: install
-install: install_lib install_inc
+install: install_lib install_inc install_bin install_sbin
 	@echo "Installation finished."
-
-.PHONY: install_binaries
-install_binaries: install_bin install_sbin
 
 install_lib: $(TARGET_LIBJAYC) preinstall
 	install -m 755 $(TARGET_LIBJAYC) $(PREFIX)/lib/
+	ldconfig
 
 install_inc: preinstall
 	for header in $(HEADERS_INST); do install -m 755 $$header $(PREFIX)/include/jayc/; done
@@ -157,24 +146,16 @@ docs: doc_doxygen
 	@echo "Documentation done."
 
 doc_md: 
-	
+	# Need to add usage and dev docs.
 
 doc_doxygen: Doxyfile
 	doxygen Doxyfile
 
 # ------------------------------------------------------------------------------
-# Make Tests
-# all_tests: $(TARGET_TESTS)
-# 	@echo "All tests done."
-
-# build/tests/%: tests/%.c $(OBJ)
-# 	$(CC) $? -o $@ $(INC) $(LIB)
-
-# ------------------------------------------------------------------------------
 # General Recipes
 
 build/objects/%.o: src/%.c build
-	$(CC) -c $< -o $@ $(CFLAGS) $(BUILD_FLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS) $(BUILD_FLAGS) -fpic
 
 build:
 	mkdir -p build/objects

@@ -60,6 +60,19 @@ static char *argHandler_ip(const char **data, size_t data_size);
 static char *argHandler_port(const char **data, size_t data_size);
 static char *argHandler_hashcode(const char **data, size_t data_size);
 
+static jutil_args_progDesc_t prog_desc =
+{
+  "jsys_test",
+
+  "Test program to checkout jcon_system. Creates a TCP server " \
+  "and handles every new connection in a thread. When a message " \
+  "is recieved, the server responds with the hashed message.",
+
+  "-TEST-",
+  "Manuel Nadji (https://github.com/gnarrf95)",
+  "Copyright (c) 2020 by Manuel Nadji"
+};
+
 static jutil_args_option_t options[] =
 {
   {
@@ -162,7 +175,7 @@ int main(int argc, char *argv[])
 
   if(jutil_args_process
     (
-      NULL,
+      &prog_desc,
       argc,
       argv,
       (jutil_args_option_t *)options,

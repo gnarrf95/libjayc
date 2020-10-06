@@ -12,6 +12,7 @@
 #include <jayc/jutil_args.h>
 #include <jayc/jproc.h>
 #include <jayc/jlog.h>
+#include <jayc/jinfo.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -24,7 +25,7 @@
 
 typedef struct __jutil_args_context
 {
-  char *prog_name;
+  jutil_args_progDesc_t *prog_desc;
 
   int argc;
   char **argv;
@@ -50,6 +51,15 @@ typedef struct __jutil_args_context
 //==============================================================================
 // Declare internal funcions.
 //
+
+/**
+ * @brief Gets size of option parameter array.
+ * 
+ * @param params  Parameters to count.
+ * 
+ * @return        Number of parameters in array.
+ */
+static size_t jutil_args_optionParam_getSize(const jutil_args_optionParam_t *params);
 
 /**
  * @brief Checks for correctness of option.
@@ -143,6 +153,13 @@ static void jutil_args_printError(jutil_args_ctx_t *ctx, const char *fmt, ...);
  */
 static void jutil_args_printHelp(jutil_args_ctx_t *ctx);
 
+/**
+ * @brief prints info about library and program versions.
+ * 
+ * @param ctx Parser context.
+ */
+static void jutil_args_printVersionInfo(jutil_args_ctx_t *ctx);
+
 
 
 //==============================================================================
@@ -171,7 +188,7 @@ char *jutil_args_error(const char *fmt, ...)
 
 //------------------------------------------------------------------------------
 //
-int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, size_t opt_number)
+int jutil_args_process(jutil_args_progDesc_t *prog_desc, int argc, char *argv[], jutil_args_option_t *options, size_t opt_number)
 {
   /* Check if options available. */
   if(opt_number == 0)
@@ -197,7 +214,7 @@ int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, siz
   /* Context to pass to sub-functions. */
   jutil_args_ctx_t context =
   {
-    argv[0],
+    prog_desc,
     argc,
     argv,
     0,
@@ -275,6 +292,34 @@ int jutil_args_process(int argc, char *argv[], jutil_args_option_t *options, siz
 
 //------------------------------------------------------------------------------
 //
+size_t jutil_args_optionParam_getSize(const jutil_args_optionParam_t *params)
+{
+  if(params == NULL)
+  {
+    return 0;
+  }
+
+  /* Check for JUTIL_ARGS_OPTIONPARAM_EMPTY */
+  if(params[0].name == NULL && params[0].description == NULL)
+  {
+    return 0;
+  }
+
+  size_t ctr;
+  for(ctr = 0; ctr < JUTIL_ARGS_OPTIONPARAM_MAXSIZE; ctr++)
+  {
+    /* Check for JUTIL_ARGS_OPTIONPARAM_END */
+    if(params[ctr].name == NULL && params[ctr].description == NULL)
+    {
+      return ctr;
+    }
+  }
+
+  return JUTIL_ARGS_OPTIONPARAM_MAXSIZE;
+}
+
+//------------------------------------------------------------------------------
+//
 int jutil_args_validateOption(jutil_args_option_t option)
 {
   if(option.name == NULL)
@@ -293,6 +338,34 @@ int jutil_args_validateOption(jutil_args_option_t option)
   {
     ERROR("Option needs a handler.");
     return false;
+  }
+
+  if(option.tag_short == 'h' || option.tag_short == 'v')
+  {
+    ERROR("Tag [-%c] already used by jutil_args.", option.tag_short);
+    return false;
+  }
+
+  if(strcmp(option.tag_long, "help") == 0 || strcmp(option.tag_long, "version") == 0)
+  {
+    ERROR("Tag [--%s] already used by jutil_args.", option.tag_long);
+    return false;
+  }
+
+  size_t size_param = jutil_args_optionParam_getSize(option.params);
+  size_t ctr_param;
+  for
+  (
+    ctr_param = 0;
+    ctr_param < size_param;
+    ctr_param++
+  )
+  {
+    if(option.params[ctr_param].name == NULL)
+    {
+      ERROR("Option parameter needs a name.");
+      return false;
+    }
   }
 
   /* For processing ctr_processed needs to be 0. */
@@ -321,6 +394,13 @@ int jutil_args_processShortTag(jutil_args_ctx_t *ctx)
     return false;
   }
 
+  /* Check if version-tag recieved. */
+  if(tag == 'v')
+  {
+    jutil_args_printVersionInfo(ctx);
+    return false;
+  }
+
   jutil_args_option_t *option = jutil_args_getShortOption(ctx, tag);
   if(option == NULL)
   {
@@ -329,12 +409,11 @@ int jutil_args_processShortTag(jutil_args_ctx_t *ctx)
   }
 
   char **data = NULL;
-  size_t data_size = 0;
+  size_t data_size = jutil_args_optionParam_getSize(option->params);
 
   /* Read additional arguments for option. */
-  if(option->data_required)
+  if(data_size)
   {
-    data_size = option->data_required;
     data = (char **)malloc(sizeof(char *) * data_size);
     if(data == NULL)
     {
@@ -392,6 +471,13 @@ int jutil_args_processLongTag(jutil_args_ctx_t *ctx)
     return false;
   }
 
+  /* Check if version-tag recieved. */
+  if(strcmp(tag, "version") == 0)
+  {
+    jutil_args_printVersionInfo(ctx);
+    return false;
+  }
+
   jutil_args_option_t *option = jutil_args_getLongOption(ctx, tag);
   if(option == NULL)
   {
@@ -400,12 +486,11 @@ int jutil_args_processLongTag(jutil_args_ctx_t *ctx)
   }
 
   char **data = NULL;
-  size_t data_size = 0;
+  size_t data_size = jutil_args_optionParam_getSize(option->params);
 
   /* Read additional arguments for option. */
-  if(option->data_required)
+  if(data_size)
   {
-    data_size = option->data_required;
     data = (char **)malloc(sizeof(char *) * data_size);
     if(data == NULL)
     {
@@ -482,52 +567,75 @@ jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char *tag)
 //
 void jutil_args_printHelp(jutil_args_ctx_t *ctx)
 {
-  char *prog_name = ctx->argv[0];
-  
-  fprintf(stdout, "Usage: %s\n", prog_name);
+  printf("## [Program] ##\n");
+  printf("%s (%s)\n\n", ctx->prog_desc->prog_name, ctx->prog_desc->version_string);
 
-  size_t ctr;
-  for(ctr = 0; ctr < ctx->opt_number; ctr++)
+  printf("## [Description] ##\n");
+  printf("%s\n\n", ctx->prog_desc->description);
+
+  jutil_args_printUsage(ctx, stdout);
+  printf("\n");
+
+  printf("## [Options] ##\n\n");
+  size_t ctr_op;
+  for(ctr_op = 0; ctr_op < ctx->opt_number; ctr_op++)
   {
-    jutil_args_option_t op = ctx->options[ctr];
+    jutil_args_option_t op = ctx->options[ctr_op];
+    size_t size_par = jutil_args_optionParam_getSize(op.params);
+    size_t ctr_par;
 
-    fprintf(stdout, "%s :\n", op.name);
-
-    fprintf(stdout, "  [");
-
-    if(op.tag_long && op.tag_short)
+    /* Option description. */
+    printf("# %s", op.name);
+    if(!op.mandatory)
     {
-      fprintf(stdout, "-%c/--%s]", op.tag_short, op.tag_long);
+      printf(" (optional)");
     }
-    else if(op.tag_long)
-    {
-      fprintf(stdout, "--%s]", op.tag_long);
-    }
-    else
-    {
-      fprintf(stdout, "-%c]", op.tag_short);
-    }
+    printf(" :\n");
 
-    size_t ctr_args;
-    for(ctr_args = 0; ctr_args < op.data_required; ctr_args++)
+    printf("  %s\n\n", op.description);
+
+    /* Option syntax. */
+    if(op.tag_short == 0 && op.tag_long == NULL)
     {
-      fprintf(stdout, " <value-%lu>", ctr_args+1);
+      // Not yet supported.
     }
-
-    fprintf(stdout, "\n");
-
-    if(op.description)
+    else if(op.tag_long == NULL)
     {
-      fprintf(stdout, "%s", op.description);
+      printf("  Usage: -%c", op.tag_short);
+    }
+    else if(op.tag_short == 0)
+    {
+      printf("  Usage: --%s", op.tag_long);
     }
     else
     {
-      fprintf(stdout, "No description found.");
+      printf("  Usage: --%s/-%c", op.tag_long, op.tag_short);
     }
-    fprintf(stdout, "\n\n");
+
+    for(ctr_par = 0; ctr_par < size_par; ctr_par++)
+    {
+      printf(" <%s>", op.params[ctr_par].name);
+    }
+    printf("\n\n");
+
+    /* Parameter description. */
+    if(size_par)
+    {
+      printf("  Parameters:\n");
+      for(ctr_par = 0; ctr_par < size_par; ctr_par++)
+      {
+        printf("  - %s : %s\n", op.params[ctr_par].name, op.params[ctr_par].description);
+      }
+      printf("\n");
+    }
   }
+
+  printf("## [Copyright Notest] ##\n");
+  printf("Developer: %s\n", ctx->prog_desc->developer_info);
+  printf("%s\n\n", ctx->prog_desc->copyright_info);
 }
 
+/*
 //------------------------------------------------------------------------------
 //
 void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)
@@ -556,14 +664,65 @@ void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)
       fprintf(output, "-%c]", op.tag_short);
     }
 
+    size_t size_args = jutil_args_optionParam_getSize(op.params);
+
     size_t ctr_args;
-    for(ctr_args = 0; ctr_args < op.data_required; ctr_args++)
+    for(ctr_args = 0; ctr_args < size_args; ctr_args++)
     {
-      fprintf(output, " <value-%lu>", ctr_args+1);
+      fprintf(stdout, " <%s>", op.params[ctr_args].name);
     }
 
     fprintf(output, "\n");
   }
+}
+*/
+
+//------------------------------------------------------------------------------
+//
+void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)
+{
+  /* Program called. */
+  fprintf(output, "Usage: %s ", ctx->argv[0]);
+
+  size_t ctr;
+
+  for(ctr = 0; ctr < ctx->opt_number; ctr++)
+  {
+    jutil_args_option_t op = ctx->options[ctr];
+
+    if(op.tag_short == 0 && op.tag_long == NULL)
+    {
+      // Not yet supported.
+      continue;
+    }
+
+    if(!op.mandatory)
+    {
+      fprintf(output, "[");
+    }
+
+    if(op.tag_short == 0)
+    {
+      fprintf(output, "--%s", op.tag_long);
+    }
+    else
+    {
+      fprintf(output, "-%c", op.tag_short);
+    }
+
+    if(jutil_args_optionParam_getSize(op.params))
+    {
+      fprintf(output, " ...");
+    }
+
+    if(!op.mandatory)
+    {
+      fprintf(output, "]");
+    }
+    fprintf(output, " ");
+  }
+
+  fprintf(output, "\n");
 }
 
 //------------------------------------------------------------------------------
@@ -581,4 +740,16 @@ void jutil_args_printError(jutil_args_ctx_t *ctx, const char *fmt, ...)
   jutil_args_printUsage(ctx, stderr);
   fprintf(stderr, "\nUse [-h / --help], to get more info.\n");
 
+}
+
+//------------------------------------------------------------------------------
+//
+void jutil_args_printVersionInfo(jutil_args_ctx_t *ctx)
+{
+  printf("## [Program Version] ##\n");
+  printf("%s %s\n\n", ctx->prog_desc->prog_name, ctx->prog_desc->version_string);
+
+  printf("## [Library Version] ##\n");
+  printf("%s\n", jinfo_build_version());
+  printf("Build with %s on %s\n\n", jinfo_build_compiler(), jinfo_build_platform());
 }

@@ -60,6 +60,19 @@ static char *argHandler_ip(const char **data, size_t data_size);
 static char *argHandler_port(const char **data, size_t data_size);
 static char *argHandler_hashcode(const char **data, size_t data_size);
 
+static jutil_args_progDesc_t prog_desc =
+{
+  "jsys_test",
+
+  "Test program to checkout jcon_system. Creates a TCP server " \
+  "and handles every new connection in a thread. When a message " \
+  "is recieved, the server responds with the hashed message.",
+
+  "-TEST-",
+  "Manuel Nadji (https://github.com/gnarrf95)",
+  "Copyright (c) 2020 by Manuel Nadji"
+};
+
 static jutil_args_option_t options[] =
 {
   {
@@ -69,9 +82,15 @@ static jutil_args_option_t options[] =
     0,
     &argHandler_syslog,
     0,
-    1,
     0,
-    0
+    0,
+    {
+      {
+        "facility",
+        "Syslog facility used (supports \"daemon\" and \"user\"."
+      },
+      JUTIL_ARGS_OPTIONPARAM_END
+    }
   },
   {
     "Server address",
@@ -80,9 +99,15 @@ static jutil_args_option_t options[] =
     'a',
     &argHandler_ip,
     0,
-    1,
     0,
-    0
+    0,
+    {
+      {
+        "server-address",
+        "IP/DNS address for server to use."
+      },
+      JUTIL_ARGS_OPTIONPARAM_END
+    }
   },
   {
     "Server port",
@@ -91,9 +116,15 @@ static jutil_args_option_t options[] =
     'p',
     &argHandler_port,
     0,
-    1,
     0,
-    0
+    0,
+    {
+      {
+        "server-port",
+        "Port for server to use."
+      },
+      JUTIL_ARGS_OPTIONPARAM_END
+    }
   },
   {
     "Hash Code",
@@ -102,9 +133,15 @@ static jutil_args_option_t options[] =
     0,
     &argHandler_hashcode,
     0,
-    1,
     0,
-    0
+    0,
+    {
+      {
+        "hash-code",
+        "Algorithm reference (0->NONE, 1->MD5, 2->SHA256, 3->SHA512)."
+      },
+      JUTIL_ARGS_OPTIONPARAM_END
+    }
   }
 };
 
@@ -136,7 +173,14 @@ int main(int argc, char *argv[])
   jproc_exit_setHandler(jsys_cleanup, NULL);
   jproc_signal_setHandler(SIGINT, jsys_signalHandler, NULL);
 
-  if(jutil_args_process(argc, argv, (jutil_args_option_t *)options, 4) == 0)
+  if(jutil_args_process
+    (
+      &prog_desc,
+      argc,
+      argv,
+      (jutil_args_option_t *)options,
+      sizeof(options)/sizeof(jutil_args_option_t)
+    ) == 0)
   {
     jproc_exit(EXIT_FAILURE);
   }

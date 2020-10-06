@@ -27,6 +27,11 @@ extern "C" {
 typedef struct __jconfig_table jconfig_t;
 
 /**
+ * @brief Reference to iterate through config data.
+ */
+typedef void jconfig_iterator_t;
+
+/**
  * @brief Initializes config object.
  * 
  * @return  Config object pointer.
@@ -83,6 +88,38 @@ int jconfig_datapoint_set(jconfig_t *table, const char *key, const char *value);
  * @param table Table clear.
  */
 void jconfig_clear(jconfig_t *table);
+
+/**
+ * @brief Iterates through all available datapoints.
+ * 
+ * @param table Config table to iterate.
+ * @param itr   Iterator reference.
+ *              If @c NULL , starts over.
+ * 
+ * @return      Next available element.
+ * @return      @c NULL , if no more data.
+ */
+jconfig_iterator_t *jconfig_iterate(jconfig_t *table, jconfig_iterator_t *itr);
+
+/**
+ * @brief Returns key at datapoint referenced by iterator.
+ * 
+ * @param itr Iterator reference.
+ * 
+ * @return    Key string.
+ * @return    @c NULL , if error occured.
+ */
+const char *jconfig_itr_getKey(jconfig_iterator_t *itr);
+
+/**
+ * @brief Returns data at datapoint referenced by iterator.
+ * 
+ * @param itr Iterator reference.
+ * 
+ * @return    Data string.
+ * @return    @c NULL , if error occured.
+ */
+const char *jconfig_itr_getData(jconfig_iterator_t *itr);
 
 /**
  * @brief Saves config as raw key-value pair.

@@ -10,6 +10,7 @@
  */
 
 #include <jayc/jproc.h>
+#include <jayc/jlog.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -30,6 +31,7 @@ void jproc_exit(int exit_value)
     exit_function.handler(exit_value, exit_function.ctx);
   }
 
+  jlog_global_session_free();
   exit(exit_value);
 }
 

@@ -163,6 +163,11 @@ int jconfig_datapoint_set(jconfig_t *table, const char *key, const char *value)
 //
 void jconfig_clear(jconfig_t *table)
 {
+  if(table == NULL)
+  {
+    return;
+  }
+
   jutil_map_data_t *itr = NULL;
 
   while( (itr = jutil_map_iterate(table->map, itr)) != NULL )
@@ -175,8 +180,51 @@ void jconfig_clear(jconfig_t *table)
 
 //------------------------------------------------------------------------------
 //
+jconfig_iterator_t *jconfig_iterate(jconfig_t *table, jconfig_iterator_t *itr)
+{
+  if(table == NULL)
+  {
+    return NULL;
+  }
+
+  return (jconfig_iterator_t *)jutil_map_iterate(table->map, (jutil_map_data_t *)itr);
+}
+
+//------------------------------------------------------------------------------
+//
+const char *jconfig_itr_getKey(jconfig_iterator_t *itr)
+{
+  if(itr == NULL)
+  {
+    return NULL;
+  }
+
+  jutil_map_data_t *map_itr = itr;
+  return (const char *)map_itr->index;
+}
+
+//------------------------------------------------------------------------------
+//
+const char *jconfig_itr_getData(jconfig_iterator_t *itr)
+{
+  if(itr == NULL)
+  {
+    return NULL;
+  }
+
+  jutil_map_data_t *map_itr = itr;
+  return (const char *)map_itr->data;
+}
+
+//------------------------------------------------------------------------------
+//
 int jconfig_raw_saveToFile(jconfig_t *table, const char *filename)
 {
+  if(table == NULL)
+  {
+    return false;
+  }
+
   FILE *fd = fopen(filename, "w");
   if(fd == NULL)
   {
@@ -210,6 +258,11 @@ int jconfig_raw_saveToFile(jconfig_t *table, const char *filename)
 //
 int jconfig_raw_loadFromFile(jconfig_t *table, const char *filename)
 {
+  if(table == NULL)
+  {
+    return false;
+  }
+
   FILE *fd = fopen(filename, "r");
   if(fd == NULL)
   {
@@ -222,13 +275,23 @@ int jconfig_raw_loadFromFile(jconfig_t *table, const char *filename)
   size_t line_size = 0;
   while(getline(&lineptr, &line_size, fd) > 0)
   {
-    char key[2048];
-    char data[2048];
+    char key[2048] = { 0 };
+    char data[2048] = { 0 };
 
-    if(sscanf(lineptr, "%2047[^=]=%2047[^\n]\n", key, data) != 2)
+    /* Empty lines are ignored. */
+    if(lineptr[0] == '\n')
     {
       free(lineptr);
       continue;
+    }
+
+    if(sscanf(lineptr, "%2047[^=]=%2047[^\n]\n", key, data) != 2)
+    {
+      if(strlen(key) == 0)
+      {
+        free(lineptr);
+        continue;
+      }
     }
 
     free(lineptr);

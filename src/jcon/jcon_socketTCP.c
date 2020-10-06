@@ -181,7 +181,7 @@ static void jcon_socketTCP_log(jcon_socket_t *session, int log_type, const char 
 
 //------------------------------------------------------------------------------
 //
-jcon_socket_t *jcon_socketTCP_simpleInit(const char *address, uint16_t port, jlog_t *logger)
+jcon_socket_t *jcon_socketTCP_simple_init(const char *address, uint16_t port, jlog_t *logger)
 {
   jcon_socket_t *session = (jcon_socket_t *)malloc(sizeof(jcon_socket_t));
   if(session == NULL)

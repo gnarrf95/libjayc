@@ -34,7 +34,7 @@ extern "C" {
  * @return        Session object.
  * @return        @c NULL , if error occured.
  */
-jcon_socket_t *jcon_socketTCP_simpleInit(const char *address, uint16_t port, jlog_t *logger);
+jcon_socket_t *jcon_socketTCP_simple_init(const char *address, uint16_t port, jlog_t *logger);
 
 #ifdef __cplusplus
 }

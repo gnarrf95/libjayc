@@ -182,7 +182,7 @@ static void jcon_socketUnix_log(jcon_socket_t *session, int log_type, const char
 
 //------------------------------------------------------------------------------
 //
-jcon_socket_t *jcon_socketUnix_simpleInit(const char *filepath, jlog_t *logger)
+jcon_socket_t *jcon_socketUnix_simple_init(const char *filepath, jlog_t *logger)
 {
   jcon_socket_t *session = (jcon_socket_t *)malloc(sizeof(jcon_socket_t));
   if(session == NULL)

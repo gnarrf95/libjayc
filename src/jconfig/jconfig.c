@@ -278,6 +278,13 @@ int jconfig_raw_loadFromFile(jconfig_t *table, const char *filename)
     char key[2048] = { 0 };
     char data[2048] = { 0 };
 
+    /* Empty lines are ignored. */
+    if(lineptr[0] == '\n')
+    {
+      free(lineptr);
+      continue;
+    }
+
     if(sscanf(lineptr, "%2047[^=]=%2047[^\n]\n", key, data) != 2)
     {
       if(strlen(key) == 0)

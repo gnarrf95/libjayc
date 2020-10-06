@@ -15,7 +15,7 @@
 #define INCLUDE_JCON_CLIENT_TCP_H
 
 #include <jayc/jcon_client.h>
-#include <jayc/jcon_tcp.h>
+#include <jayc/jcon_socketTCP.h>
 #include <jayc/jlog.h>
 
 #ifdef __cplusplus
@@ -49,7 +49,7 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
  * @return            jcon_client session for new connection.
  * @return            @c NULL , if error occured.
  */
-jcon_client_t *jcon_client_tcp_session_tcpClone(jcon_tcp_t *tcp_session, jlog_t *logger);
+jcon_client_t *jcon_client_tcp_session_tcpClone(jcon_socket_t *tcp_session, jlog_t *logger);
 
 #ifdef __cplusplus
 }

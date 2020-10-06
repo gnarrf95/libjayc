@@ -15,7 +15,7 @@
 #define INCLUDE_JCON_CLIENT_UNIX_H
 
 #include <jayc/jcon_client.h>
-#include <jayc/jcon_unix.h>
+#include <jayc/jcon_socketUnix.h>
 #include <jayc/jlog.h>
 
 #ifdef __cplusplus
@@ -48,7 +48,7 @@ jcon_client_t *jcon_client_unix_session_init(char *filepath, jlog_t *logger);
  * @return              jcon_client session for new connection.
  * @return              @c NULL , if error occured.
  */
-jcon_client_t *jcon_client_unix_session_unixClone(jcon_unix_t *unix_session, jlog_t *logger);
+jcon_client_t *jcon_client_unix_session_unixClone(jcon_socket_t *unix_session, jlog_t *logger);
 
 #ifdef __cplusplus
 }

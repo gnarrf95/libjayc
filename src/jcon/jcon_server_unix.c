@@ -12,7 +12,7 @@
 #include <jayc/jcon_server_unix.h>
 #include <jayc/jcon_server_dev.h>
 #include <jayc/jcon_client_unix.h>
-#include <jayc/jcon_unix.h>
+#include <jayc/jcon_socketUnix.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -158,7 +158,7 @@ static void jcon_server_unix_log(void *ctx, int log_type, const char *file, cons
  */
 typedef struct __jcon_server_unix_context
 {
-  jcon_unix_t *server;                 /**< jcon_unix session object. */
+  jcon_socket_t *server;                 /**< jcon_unix session object. */
   int poll_timeout;                   /**< Timeout for asking for new data in milliseconds. */
   jlog_t *logger;                     /**< Logger for debug and error messages. */
 } jcon_server_unix_context_t;
@@ -201,10 +201,10 @@ jcon_server_t *jcon_server_unix_session_init(char *filepath, jlog_t *logger)
   ctx->poll_timeout = JCON_SERVER_UNIX_POLL_TIMEOUT_DEFAULT;
   ctx->logger = logger;
 
-  ctx->server = jcon_unix_simple_init(filepath, logger);
+  ctx->server = jcon_socketUnix_simple_init(filepath, logger);
   if(ctx->server == NULL)
   {
-    ERROR(NULL, "<UNIX:%s> json_client_unix_createReferenceString() failed. Destroying context and session.", filepath);
+    ERROR(NULL, "<UNIX:%s> jcon_socketUnix_simple_init() failed. Destroying context and session.", filepath);
     free(ctx);
     free(session);
     return NULL;
@@ -229,7 +229,7 @@ void jcon_server_unix_session_free(void *ctx)
   }
 
   jcon_server_unix_context_t *session_context = (jcon_server_unix_context_t *)ctx;
-  jcon_unix_free(session_context->server);
+  jcon_socket_free(session_context->server);
 
   free(ctx);
 }
@@ -251,7 +251,7 @@ int jcon_server_unix_reset(void *ctx)
 
   jcon_server_unix_context_t *session_context = (jcon_server_unix_context_t *)ctx;
 
-  return jcon_unix_bind(session_context->server);
+  return jcon_socket_bind(session_context->server);
 }
 
 //------------------------------------------------------------------------------
@@ -272,7 +272,7 @@ void jcon_server_unix_close(void *ctx)
 
   jcon_server_unix_context_t *session_context = (jcon_server_unix_context_t *)ctx;
 
-  jcon_unix_close(session_context->server);
+  jcon_socket_close(session_context->server);
 }
 
 
@@ -288,7 +288,7 @@ int jcon_server_unix_isOpen(void *ctx)
 
   jcon_server_unix_context_t *session_context = (jcon_server_unix_context_t *)ctx;
 
-  return jcon_unix_isConnected(session_context->server);
+  return jcon_socket_isConnected(session_context->server);
 }
 
 //------------------------------------------------------------------------------
@@ -303,7 +303,7 @@ const char *jcon_server_unix_getReferenceString(void *ctx)
 
   jcon_server_unix_context_t *session_context = (jcon_server_unix_context_t *)ctx;
 
-  return jcon_unix_getReferenceString(session_context->server);
+  return jcon_socket_getReferenceString(session_context->server);
 }
 
 //------------------------------------------------------------------------------
@@ -318,7 +318,7 @@ int jcon_server_unix_newConnection(void *ctx)
 
   jcon_server_unix_context_t *session_context = (jcon_server_unix_context_t *)ctx;
 
-  return jcon_unix_pollForInput(session_context->server, session_context->poll_timeout);
+  return jcon_socket_pollForInput(session_context->server, session_context->poll_timeout);
 }
 
 //------------------------------------------------------------------------------
@@ -333,7 +333,7 @@ jcon_client_t *jcon_server_unix_acceptConnection(void *ctx)
 
   jcon_server_unix_context_t *session_context = (jcon_server_unix_context_t *)ctx;
 
-  jcon_unix_t *new_connection = jcon_unix_accept(session_context->server);
+  jcon_socket_t *new_connection = jcon_socket_accept(session_context->server);
   if(new_connection == NULL)
   {
     ERROR(ctx, "jcon_unix_accept() failed.");
@@ -344,7 +344,7 @@ jcon_client_t *jcon_server_unix_acceptConnection(void *ctx)
   if(new_client == NULL)
   {
     ERROR(ctx, "jcon_client_unix_session_unixClone() failed.");
-    jcon_unix_free(new_connection);
+    jcon_socket_free(new_connection);
     return NULL;
   }
 

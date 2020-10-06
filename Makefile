@@ -107,7 +107,7 @@ install_lib: $(TARGET_LIBJAYC) preinstall
 	ldconfig
 
 install_inc: preinstall
-	for header in $(HEADERS_INST); do install -m 755 $$header $(PREFIX)/include/jayc/; done
+	for header in $(HEADERS); do install -m 755 $$header $(PREFIX)/include/jayc/; done
 
 install_bin: preinstall $(TARGET_EXEC)
 	for binary in $(TARGET_EXEC); do install -m 755 $$binary $(PREFIX)/bin/; done

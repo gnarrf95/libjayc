@@ -11,7 +11,6 @@
 
 #include <jayc/jcon_client_tcp.h>
 #include <jayc/jcon_client_dev.h>
-#include <jayc/jcon_tcp.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -171,7 +170,7 @@ static void jcon_client_tcp_log(void *ctx, int log_type, const char *file, const
  */
 typedef struct __jcon_client_tcp_context
 {
-  jcon_tcp_t *connection;             /**< jcon_tcp session object. */
+  jcon_socket_t *connection;             /**< jcon_tcp session object. */
   int poll_timeout;                   /**< Timeout for asking for new data in milliseconds. */
   jlog_t *logger;                     /**< Logger for debug and error messages. */
 } jcon_client_tcp_context_t;
@@ -215,10 +214,10 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
   ctx->poll_timeout = JCON_CLIENT_TCP_POLL_TIMEOUT_DEFAULT;
   ctx->logger = logger;
 
-  ctx->connection = jcon_tcp_simple_init(address, port, logger);
+  ctx->connection = jcon_socketTCP_simple_init(address, port, logger);
   if(ctx->connection == NULL)
   {
-    ERROR(NULL, "<TCP:%s:%u> jcon_tcp_simple_init() failed. Destroying context and session.", address, port);
+    ERROR(NULL, "<TCP:%s:%u> jcon_socketTCP_simple_init() failed. Destroying context and session.", address, port);
     free(ctx);
     free(session);
     return NULL;
@@ -229,7 +228,7 @@ jcon_client_t *jcon_client_tcp_session_init(char *address, uint16_t port, jlog_t
 
 //------------------------------------------------------------------------------
 //
-jcon_client_t *jcon_client_tcp_session_tcpClone(jcon_tcp_t *tcp_session, jlog_t *logger)
+jcon_client_t *jcon_client_tcp_session_tcpClone(jcon_socket_t *tcp_session, jlog_t *logger)
 {
   if(tcp_session == NULL)
   {
@@ -283,7 +282,7 @@ void jcon_client_tcp_session_free(void *ctx)
   jcon_client_tcp_close(ctx);
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  jcon_tcp_free(session_context->connection);
+  jcon_socket_free(session_context->connection);
   free(ctx);
 }
 
@@ -304,9 +303,9 @@ int jcon_client_tcp_reset(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  if(jcon_tcp_connect(session_context->connection) == false)
+  if(jcon_socket_connect(session_context->connection) == false)
   {
-    ERROR(ctx, "jcon_tcp_connect() failed.");
+    ERROR(ctx, "jcon_socket_connect() failed.");
     return false;
   }
   
@@ -331,7 +330,7 @@ void jcon_client_tcp_close(void *ctx)
     return;
   }
 
-  jcon_tcp_close(session_context->connection);
+  jcon_socket_close(session_context->connection);
 }
 
 //------------------------------------------------------------------------------
@@ -346,7 +345,7 @@ int jcon_client_tcp_isConnected(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  return jcon_tcp_isConnected(session_context->connection);
+  return jcon_socket_isConnected(session_context->connection);
 }
 
 //------------------------------------------------------------------------------
@@ -361,7 +360,7 @@ const char *jcon_client_tcp_getReferenceString(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  return jcon_tcp_getReferenceString(session_context->connection);
+  return jcon_socket_getReferenceString(session_context->connection);
 }
 
 //------------------------------------------------------------------------------
@@ -376,7 +375,7 @@ int jcon_client_tcp_newData(void *ctx)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  return jcon_tcp_pollForInput(session_context->connection, session_context->poll_timeout);
+  return jcon_socket_pollForInput(session_context->connection, session_context->poll_timeout);
 }
 
 //------------------------------------------------------------------------------
@@ -391,7 +390,7 @@ size_t jcon_client_tcp_recvData(void *ctx, void *data_ptr, size_t data_size)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
 
-  return jcon_tcp_recvData(session_context->connection, data_ptr, data_size);
+  return jcon_socket_recvData(session_context->connection, data_ptr, data_size);
 }
 
 //------------------------------------------------------------------------------
@@ -406,7 +405,7 @@ size_t jcon_client_tcp_sendData(void *ctx, void *data_ptr, size_t data_size)
 
   jcon_client_tcp_context_t *session_context = (jcon_client_tcp_context_t *)ctx;
   
-  return jcon_tcp_sendData(session_context->connection, data_ptr, data_size);
+  return jcon_socket_sendData(session_context->connection, data_ptr, data_size);
 }
 
 //------------------------------------------------------------------------------

@@ -1,15 +1,15 @@
 /**
- * @file jcon_socketTCP.c
+ * @file jcon_socketUnix.c
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief Implementations for jcon_socketTCP.
+ * @brief Implementations for jcon_socketUnix.
  * 
  * @date 2020-10-06
  * @copyright Copyright (c) 2020 by Manuel Nadji
  * 
  */
 
-#include <jayc/jcon_socketTCP.h>
+#include <jayc/jcon_socketUnix.h>
 #include <jayc/jcon_socket_dev.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,24 +19,22 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+#include <sys/un.h>
 
 //==============================================================================
 // Define constants and structures.
 //
 
-#define JCON_SOCKETTCP_CONNECTIONTYPE "TCP"
+#define JCON_SOCKETUNIX_CONNECTIONTYPE "UNIX"
 
 /**
- * @brief Session context for TCP sockets.
+ * @brief Session context for Unix sockets.
  * 
  */
-typedef struct __jcon_socketTCP_context
+typedef struct __jcon_socketUnix_context
 {
-  struct sockaddr_in socket_address;  /**< Address struct. */
-} jcon_socketTCP_ctx_t;
+  struct sockaddr_un socket_address;  /**< Address struct. */
+} jcon_socketUnix_ctx_t;
 
 
 
@@ -47,7 +45,7 @@ typedef struct __jcon_socketTCP_context
 /**
  * @brief Creates session from existing socket.
  * 
- * Used by @c #jcon_socketTCP_accept() .
+ * Used by @c #jcon_socketUnix_accept() .
  * If server accepts new client, the connection to said
  * client is made into new session.
  * 
@@ -58,7 +56,7 @@ typedef struct __jcon_socketTCP_context
  * @return                Session object for new client connection.
  * @return                @c NULL in case of error.
  */
-static jcon_socket_t *jcon_socketTCP_clone(int fd, struct sockaddr_in socket_address, jlog_t *logger);
+static jcon_socket_t *jcon_socketUnix_clone(int fd, struct sockaddr_un socket_address, jlog_t *logger);
 
 /**
  * @brief Frees session memory.
@@ -67,7 +65,7 @@ static jcon_socket_t *jcon_socketTCP_clone(int fd, struct sockaddr_in socket_add
  * 
  * @param session Session object to free.
  */
-static void jcon_socketTCP_free(jcon_socket_t *session);
+static void jcon_socketUnix_free(jcon_socket_t *session);
 
 /**
  * @brief Connect to server.
@@ -79,7 +77,7 @@ static void jcon_socketTCP_free(jcon_socket_t *session);
  * @return        @c true , if connection was established.
  * @return        @c false , if connection failed.
  */
-static int jcon_socketTCP_connect(jcon_socket_t *session);
+static int jcon_socketUnix_connect(jcon_socket_t *session);
 
 /**
  * @brief Binds socket to address.
@@ -91,7 +89,7 @@ static int jcon_socketTCP_connect(jcon_socket_t *session);
  * @return        @c true , if socket was bound to address.
  * @return        @c false , if binding failed.
  */
-static int jcon_socketTCP_bind(jcon_socket_t *session);
+static int jcon_socketUnix_bind(jcon_socket_t *session);
 
 /**
  * @brief Accepts connection request.
@@ -104,34 +102,24 @@ static int jcon_socketTCP_bind(jcon_socket_t *session);
  * @return        @c NULL , if no new connection was
  *                available or error occured.
  */
-static jcon_socket_t *jcon_socketTCP_accept(jcon_socket_t *session);
+static jcon_socket_t *jcon_socketUnix_accept(jcon_socket_t *session);
 
 /**
- * @brief Extract IP address from address struct.
+ * @brief Extract filename from address struct.
  * 
  * @param socket_address  Address struct.
  * 
- * @return                String with IP address.
+ * @return                String with filename.
  * @return                @c NULL in case of error.
  */
-static char *jcon_socketTCP_getIP(struct sockaddr_in socket_address);
-
-/**
- * @brief Extract port number from address struct. 
- * 
- * @param socket_address  Address struct.
- * 
- * @return                Port number.
- * @return                @c 0 in case of error.
- */
-static uint16_t jcon_socketTCP_getPort(struct sockaddr_in socket_address);
+static char *jcon_socketUnix_getFile(struct sockaddr_un socket_address);
 
 /**
  * @brief Create reference string from socket address.
  * 
- * Reference string consists of connection type (TCP),
- * IP address ( @c #jcon_tcp_getIP() ) and port number
- * ( @c #jcon_tcp_getPort() ).
+ * Reference string consists of connection type (Unix),
+ * IP address ( @c #jcon_Unix_getIP() ) and port number
+ * ( @c #jcon_Unix_getPort() ).
  * 
  * These items get combined into one string.
  * 
@@ -140,7 +128,20 @@ static uint16_t jcon_socketTCP_getPort(struct sockaddr_in socket_address);
  * @return                Allocated reference string.
  * @return                @c NULL in case of error.
  */
-static char *jcon_socketTCP_createReferenceString(struct sockaddr_in socket_address);
+static char *jcon_socketUnix_createReferenceString(struct sockaddr_un socket_address);
+
+/**
+ * @brief Create reference string without address.
+ * 
+ * In the case of clients accepted by a server,
+ * there is no valid address available.
+ * 
+ * In that case return the ref_string "UNIX:-"
+ * 
+ * @return  Allocated empty ref string.
+ * @return  @c NULL in case of error.
+ */
+static char *jcon_socketUnix_createEmptyReferenceString();
 
 /**
  * @brief Sends log messages to logger with session data.
@@ -154,7 +155,7 @@ static char *jcon_socketTCP_createReferenceString(struct sockaddr_in socket_addr
  * @param line      Line number of source file.
  * @param fmt       String format for stdarg.h .
  */
-static void jcon_socketTCP_log(jcon_socket_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
+static void jcon_socketUnix_log(jcon_socket_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...);
 
 
 
@@ -165,13 +166,13 @@ static void jcon_socketTCP_log(jcon_socket_t *session, int log_type, const char 
 #ifdef JCON_NO_DEBUG /* Allow to turn of debug messages at compile time. */
   #define DEBUG(session, fmt, ...)
 #else
-  #define DEBUG(session, fmt, ...) jcon_socketTCP_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+  #define DEBUG(session, fmt, ...) jcon_socketUnix_log(session, JLOG_LOGTYPE_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 #endif
-#define INFO(session, fmt, ...) jcon_socketTCP_log(session, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define WARN(session, fmt, ...) jcon_socketTCP_log(session, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define ERROR(session, fmt, ...) jcon_socketTCP_log(session, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define CRITICAL(session, fmt, ...) jcon_socketTCP_log(session, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
-#define FATAL(session, fmt, ...) jcon_socketTCP_log(session, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define INFO(session, fmt, ...) jcon_socketUnix_log(session, JLOG_LOGTYPE_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define WARN(session, fmt, ...) jcon_socketUnix_log(session, JLOG_LOGTYPE_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define ERROR(session, fmt, ...) jcon_socketUnix_log(session, JLOG_LOGTYPE_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define CRITICAL(session, fmt, ...) jcon_socketUnix_log(session, JLOG_LOGTYPE_CRITICAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define FATAL(session, fmt, ...) jcon_socketUnix_log(session, JLOG_LOGTYPE_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
 
 
 
@@ -181,7 +182,7 @@ static void jcon_socketTCP_log(jcon_socket_t *session, int log_type, const char 
 
 //------------------------------------------------------------------------------
 //
-jcon_socket_t *jcon_socketTCP_simpleInit(const char *address, uint16_t port, jlog_t *logger)
+jcon_socket_t *jcon_socketUnix_simpleInit(const char *filepath, jlog_t *logger)
 {
   jcon_socket_t *session = (jcon_socket_t *)malloc(sizeof(jcon_socket_t));
   if(session == NULL)
@@ -190,18 +191,25 @@ jcon_socket_t *jcon_socketTCP_simpleInit(const char *address, uint16_t port, jlo
     return NULL;
   }
 
-  session->function_connect = &jcon_socketTCP_connect;
-  session->function_bind = &jcon_socketTCP_bind;
+  if(filepath == NULL)
+  {
+    ERROR(NULL, "filepath is NULL.");
+    free(session);
+    return NULL;
+  }
+
+  session->function_connect = &jcon_socketUnix_connect;
+  session->function_bind = &jcon_socketUnix_bind;
   session->function_close = NULL;
-  session->function_accept = &jcon_socketTCP_accept;
-  session->session_free_handler = &jcon_socketTCP_free;
+  session->function_accept = &jcon_socketUnix_accept;
+  session->session_free_handler = &jcon_socketUnix_free;
 
   session->file_descriptor = 0;
   session->logger = logger;
-  session->socket_type = JCON_SOCKETTCP_CONNECTIONTYPE;
+  session->socket_type = JCON_SOCKETUNIX_CONNECTIONTYPE;
   session->connection_type = 0;
 
-  jcon_socketTCP_ctx_t *ctx = (jcon_socketTCP_ctx_t *)malloc(sizeof(jcon_socketTCP_ctx_t));
+  jcon_socketUnix_ctx_t *ctx = (jcon_socketUnix_ctx_t *)malloc(sizeof(jcon_socketUnix_ctx_t));
   if(ctx == NULL)
   {
     ERROR(NULL, "malloc() failed. Destroying session.");
@@ -209,23 +217,23 @@ jcon_socket_t *jcon_socketTCP_simpleInit(const char *address, uint16_t port, jlo
     return NULL;
   }
 
-  ctx->socket_address.sin_family = AF_INET;
-  ctx->socket_address.sin_port = htons(port);
-
-  struct hostent *hostinfo;
-  hostinfo = gethostbyname(address);
-  if(hostinfo == NULL)
+  if(strlen(filepath) >= sizeof(ctx->socket_address.sun_path))
   {
-    ERROR(NULL, "<TCP:%s:%u> gethostbyname() failed. Destroying context and session.", address, port);
+    ERROR(NULL, "Filepath too long.");
     free(session);
+    free(ctx);
     return NULL;
   }
-  ctx->socket_address.sin_addr = *(struct in_addr *)hostinfo->h_addr_list[0];
 
-  session->referenceString = jcon_socketTCP_createReferenceString(ctx->socket_address);
+  ctx->socket_address.sun_family = AF_LOCAL;
+  
+  memset(ctx->socket_address.sun_path, 0, sizeof(ctx->socket_address.sun_path));
+  memcpy(ctx->socket_address.sun_path, filepath, strlen(filepath));
+
+  session->referenceString = jcon_socketUnix_createReferenceString(ctx->socket_address);
   if(session->referenceString == NULL)
   {
-    ERROR(NULL, "<TCP> jcon_socketTCP_createReferenceString() failed. Destroying session.");
+    ERROR(NULL, "<Unix> jcon_SocketUnix_createReferenceString() failed. Destroying session.");
     free(session);
     free(ctx);
     return NULL;
@@ -244,7 +252,7 @@ jcon_socket_t *jcon_socketTCP_simpleInit(const char *address, uint16_t port, jlo
 
 //------------------------------------------------------------------------------
 //
-jcon_socket_t *jcon_socketTCP_clone(int fd, struct sockaddr_in socket_address, jlog_t *logger)
+jcon_socket_t *jcon_socketUnix_clone(int fd, struct sockaddr_un socket_address, jlog_t *logger)
 {
   if(fd <= 0)
   {
@@ -263,13 +271,13 @@ jcon_socket_t *jcon_socketTCP_clone(int fd, struct sockaddr_in socket_address, j
   session->function_bind = NULL; /* Cloned sessions cannot bind. */
   session->function_close = NULL;
   session->function_accept = NULL; /* Cloned sessions cannot bind and therefore not accept. */
-  session->session_free_handler = &jcon_socketTCP_free;
+  session->session_free_handler = &jcon_socketUnix_free;
 
   session->file_descriptor = fd;
   session->logger = logger;
   session->connection_type = JCON_SOCKET_CONNECTIONTYPE_CLIENT;
 
-  jcon_socketTCP_ctx_t *ctx = (jcon_socketTCP_ctx_t *)malloc(sizeof(jcon_socketTCP_ctx_t));
+  jcon_socketUnix_ctx_t *ctx = (jcon_socketUnix_ctx_t *)malloc(sizeof(jcon_socketUnix_ctx_t));
   if(ctx == NULL)
   {
     ERROR(NULL, "malloc() failed. Destroying session.");
@@ -278,10 +286,10 @@ jcon_socket_t *jcon_socketTCP_clone(int fd, struct sockaddr_in socket_address, j
   }
 
   ctx->socket_address = socket_address;
-  session->referenceString = jcon_socketTCP_createReferenceString(socket_address);
+  session->referenceString = jcon_socketUnix_createEmptyReferenceString();
   if(session->referenceString == NULL)
   {
-    ERROR(NULL, "<TCP> json_socketTCP_createReferenceString() failed. Destroying context and session.");
+    ERROR(NULL, "<Unix> json_socketUnix_createReferenceString() failed. Destroying context and session.");
     free(session);
     free(ctx);
     return NULL;
@@ -294,7 +302,7 @@ jcon_socket_t *jcon_socketTCP_clone(int fd, struct sockaddr_in socket_address, j
 
 //------------------------------------------------------------------------------
 //
-void jcon_socketTCP_free(jcon_socket_t *session)
+void jcon_socketUnix_free(jcon_socket_t *session)
 {
   if(session == NULL)
   {
@@ -310,7 +318,7 @@ void jcon_socketTCP_free(jcon_socket_t *session)
 
 //------------------------------------------------------------------------------
 //
-int jcon_socketTCP_connect(jcon_socket_t *session)
+int jcon_socketUnix_connect(jcon_socket_t *session)
 {
   if(session == NULL)
   {
@@ -324,14 +332,14 @@ int jcon_socketTCP_connect(jcon_socket_t *session)
     return true;
   }
 
-  int fd = socket(AF_INET, SOCK_STREAM, 0);
+  int fd = socket(AF_LOCAL, SOCK_STREAM, 0);
   if(fd < 0)
   {
     ERROR(session, "socket() failed [%d : %s].", errno, strerror(errno));
     return false;
   }
 
-  struct sockaddr_in addr = ((jcon_socketTCP_ctx_t *)session->session_ctx)->socket_address;
+  struct sockaddr_un addr = ((jcon_socketUnix_ctx_t *)session->session_ctx)->socket_address;
 
   if(connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
   {
@@ -350,7 +358,7 @@ int jcon_socketTCP_connect(jcon_socket_t *session)
 
 //------------------------------------------------------------------------------
 //
-int jcon_socketTCP_bind(jcon_socket_t *session)
+int jcon_socketUnix_bind(jcon_socket_t *session)
 {
   if(session == NULL)
   {
@@ -364,14 +372,14 @@ int jcon_socketTCP_bind(jcon_socket_t *session)
     return true;
   }
 
-  int fd = socket(AF_INET, SOCK_STREAM, 0);
+  int fd = socket(AF_LOCAL, SOCK_STREAM, 0);
   if(fd < 0)
   {
     ERROR(session, "socket() failed [%d : %s].", errno, strerror(errno));
     return false;
   }
 
-  struct sockaddr_in addr = ((jcon_socketTCP_ctx_t *)session->session_ctx)->socket_address;
+  struct sockaddr_un addr = ((jcon_socketUnix_ctx_t *)session->session_ctx)->socket_address;
 
   if(bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
   {
@@ -400,7 +408,7 @@ int jcon_socketTCP_bind(jcon_socket_t *session)
 
 //------------------------------------------------------------------------------
 //
-jcon_socket_t *jcon_socketTCP_accept(jcon_socket_t *session)
+jcon_socket_t *jcon_socketUnix_accept(jcon_socket_t *session)
 {
   if(session == NULL)
   {
@@ -409,8 +417,8 @@ jcon_socket_t *jcon_socketTCP_accept(jcon_socket_t *session)
   }
 
   int new_fd;
-  struct sockaddr_in new_addr;
-  socklen_t addrlen = sizeof(struct sockaddr_in);
+  struct sockaddr_un new_addr;
+  socklen_t addrlen = sizeof(struct sockaddr_un);
 
   new_fd = accept(session->file_descriptor, (struct sockaddr *)&new_addr, &addrlen);
   if(new_fd < 0)
@@ -419,10 +427,10 @@ jcon_socket_t *jcon_socketTCP_accept(jcon_socket_t *session)
     return NULL;
   }
 
-  jcon_socket_t *new_con = jcon_socketTCP_clone(new_fd, new_addr, session->logger);
+  jcon_socket_t *new_con = jcon_socketUnix_clone(new_fd, new_addr, session->logger);
   if(new_con == NULL)
   {
-    ERROR(session, "jcon_socket_clone() failed with new connection [TCP:%s:%u].", jcon_socketTCP_getIP(new_addr), jcon_socketTCP_getPort(new_addr));
+    ERROR(session, "jcon_socketUnix_clone() failed with new connection [Unix:%s].", jcon_socketUnix_getFile(new_addr));
     close(new_fd);
     return NULL;
   }
@@ -432,48 +440,33 @@ jcon_socket_t *jcon_socketTCP_accept(jcon_socket_t *session)
 
 //------------------------------------------------------------------------------
 //
-char *jcon_socketTCP_getIP(struct sockaddr_in socket_address)
+char *jcon_socketUnix_getFile(struct sockaddr_un socket_address)
 {
-  char *ip = inet_ntoa(socket_address.sin_addr);
-  if(ip == NULL)
+  char *file = socket_address.sun_path;
+  if(file == NULL)
   {
-    ERROR(NULL, "inet_ntoa() failed.");
+    ERROR(NULL, "Session\'s address invalid.");
     return NULL;
   }
 
-  return ip;
+  return file;
 }
 
 //------------------------------------------------------------------------------
 //
-uint16_t jcon_socketTCP_getPort(struct sockaddr_in socket_address)
-{
-  return ntohs(socket_address.sin_port);
-}
-
-//------------------------------------------------------------------------------
-//
-char *jcon_socketTCP_createReferenceString(struct sockaddr_in socket_address)
+char *jcon_socketUnix_createReferenceString(struct sockaddr_un socket_address)
 {
   char buf[128] = { 0 };
-  char *ip;
-  uint16_t port;
+  char *file;
   
-  ip = jcon_socketTCP_getIP(socket_address);
-  if(ip == NULL)
+  file = jcon_socketUnix_getFile(socket_address);
+  if(file == NULL)
   {
-    ERROR(NULL, "jcon_socketTCP_getIP() failed.");
+    ERROR(NULL, "jcon_client_tcp_getFile() failed.");
     return NULL;
   }
 
-  port = jcon_socketTCP_getPort(socket_address);
-  if(port == 0)
-  {
-    ERROR(NULL, "jcon_socketTCP_getPort() failed.");
-    return NULL;
-  }
-
-  if(sprintf(buf, "TCP:%s:%u", ip, port) < 0)
+  if(sprintf(buf, "UNIX:%s", file) < 0)
   {
     ERROR(NULL, "sprintf() failed.");
     return NULL;
@@ -483,7 +476,7 @@ char *jcon_socketTCP_createReferenceString(struct sockaddr_in socket_address)
   char *ret = (char *)malloc(size_refString);
   if(ret == NULL)
   {
-    ERROR(NULL, "<TCP:%s:%u> malloc() failed.", ip, port);
+    ERROR(NULL, "<UNIX:%s> malloc() failed.", file);
     return NULL;
   }
 
@@ -497,7 +490,29 @@ char *jcon_socketTCP_createReferenceString(struct sockaddr_in socket_address)
 
 //------------------------------------------------------------------------------
 //
-void jcon_socketTCP_log(jcon_socket_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
+char *jcon_socketUnix_createEmptyReferenceString()
+{
+  const char *buf = "UNIX:-";
+
+  size_t size_refString = sizeof(char) * (strlen(buf) + 1);
+  char *ret = (char *)malloc(size_refString);
+  if(ret == NULL)
+  {
+    ERROR(NULL, "<UNIX> malloc() failed.");
+    return NULL;
+  }
+
+  /* Changed implementation from using strcpy, to using memcpy;
+     to calm down devskim checks. */
+  memset(ret, 0, size_refString);
+  memcpy(ret, buf, size_refString);
+
+  return ret;
+}
+
+//------------------------------------------------------------------------------
+//
+void jcon_socketUnix_log(jcon_socket_t *session, int log_type, const char *file, const char *function, int line, const char *fmt, ...)
 {
   va_list args;
   char buf[2048];

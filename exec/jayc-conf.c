@@ -206,7 +206,7 @@ static jutil_args_progDesc_t prog_desc =
   "Program that can edit configurations and save/read " \
   "to/from files.",
 
-  "v0.5-alpha",
+  "v0.6-alpha",
   "Manuel Nadji (https://github.com/gnarrf95)",
   "Copyright (c) 2020 by Manuel Nadji"
 };
@@ -308,6 +308,14 @@ int main(int argc, char *argv[])
       ERROR("getline() failed.");
       free(cmd_buf);
       jproc_exit(JAYCCONF_EXIT_FAILURE);
+    }
+
+    if(cmd_buf[0] == '\n')
+    {
+      free(cmd_buf);
+      cmd_buf = NULL;
+      cmd_size = 0;
+      continue;
     }
 
     char *cmd_str = (char *)malloc(sizeof(char) * cmd_size);
@@ -586,7 +594,14 @@ int jaycConf_processCMD(char *cmd)
       return false;
     }
 
-    return jaycConf_loadConfig(cmd_par1, atoi(cmd_par2));
+    if(jaycConf_loadConfig(cmd_par1, atoi(cmd_par2)))
+    {
+      printf("OK\n\n");
+      return true;
+    }
+
+    printf("Could not load config.");
+    return false;
   }
   else if(strcmp(cmd_main, JAYCCONF_CMD_SAVE) == 0)
   {
@@ -601,7 +616,14 @@ int jaycConf_processCMD(char *cmd)
       return false;
     }
 
-    return jaycConf_saveConfig(cmd_par1, atoi(cmd_par2));
+    if(jaycConf_saveConfig(cmd_par1, atoi(cmd_par2)))
+    {
+      printf("OK\n\n");
+      return true;
+    }
+
+    printf("Could not save config.");
+    return false;
   }
   else if(strcmp(cmd_main, JAYCCONF_CMD_SET) == 0)
   {
@@ -616,7 +638,14 @@ int jaycConf_processCMD(char *cmd)
       return false;
     }
 
-    return jconfig_datapoint_set(g_data.config_data, cmd_par1, cmd_par2);
+    if(jconfig_datapoint_set(g_data.config_data, cmd_par1, cmd_par2))
+    {
+      printf("OK\n\n");
+      return true;
+    }
+
+    printf("Could not set value.");
+    return false;
   }
   else if(strcmp(cmd_main, JAYCCONF_CMD_GET) == 0)
   {
@@ -654,7 +683,14 @@ int jaycConf_processCMD(char *cmd)
       return false;
     }
 
-    return jconfig_datapoint_delete(g_data.config_data, cmd_par1);
+    if(jconfig_datapoint_delete(g_data.config_data, cmd_par1))
+    {
+      printf("OK\n\n");
+      return true;
+    }
+
+    printf("Could not delete key.");
+    return false;
   }
   else if(strcmp(cmd_main, JAYCCONF_CMD_DUMP) == 0)
   {

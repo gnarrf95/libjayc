@@ -381,6 +381,12 @@ int jcon_socketUnix_bind(jcon_socket_t *session)
 
   struct sockaddr_un addr = ((jcon_socketUnix_ctx_t *)session->session_ctx)->socket_address;
 
+  if(unlink(addr.sun_path) < 0)
+  {
+    ERROR(session, "unlink() failed [%d : %s].", errno, strerror(errno));
+    return false;
+  }
+
   if(bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
   {
     ERROR(session, "bind() failed [%d : %s]. Closing socket.", errno, strerror(errno));

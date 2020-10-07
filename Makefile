@@ -13,9 +13,10 @@ INC = -I inc/
 CFLAGS = $(INC)
 
 LDF_PTHREAD = -lpthread
+LDF_REALTIME = -lrt
 LDF_CRYPTO = -lcrypto
 
-LDFLAGS = $(LDF_PTHREAD) $(LDF_CRYPTO)
+LDFLAGS = $(LDF_PTHREAD) $(LDF_CRYPTO) $(LDF_REALTIME)
 
 # Use build flags to change compilation parameters for library.
 # Flags:

@@ -9,11 +9,9 @@
  * 
  */
 
-#define _POSIX_C_SOURCE 199309L /* needed for nanosleep() */
-
 #include <jayc/jutil_thread.h>
+#include <jayc/jutil_time.h>
 #include <stdbool.h>
-#include <time.h>
 #include <errno.h>
 #include <string.h>
 #include <stdarg.h>
@@ -393,10 +391,6 @@ void *jutil_thread_pthread_handler(void *ctx)
     return NULL;
   }
 
-  struct timespec sleep_time;
-  sleep_time.tv_sec = 0;
-  sleep_time.tv_nsec = session->loop_sleep;
-
   int run;
   jutil_thread_pmutex_lock(session);
   run = session->run_signal;
@@ -411,10 +405,7 @@ void *jutil_thread_pthread_handler(void *ctx)
     int ret_loop = session->loop_function(session->ctx, session);
 
     /* Sleep. */
-    if(nanosleep(&sleep_time, NULL))
-    {
-      ERROR(session, "nanosleep() failed [%d : %s].", errno, strerror(errno));
-    }
+    jutil_time_sleep(0, session->loop_sleep);
 
     /* Check, if thread should exit. */
     jutil_thread_pmutex_lock(session);

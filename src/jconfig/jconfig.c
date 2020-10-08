@@ -180,14 +180,31 @@ void jconfig_clear(jconfig_t *table)
 
 //------------------------------------------------------------------------------
 //
-jconfig_iterator_t *jconfig_iterate(jconfig_t *table, jconfig_iterator_t *itr)
+jconfig_iterator_t *jconfig_iterate(jconfig_t *table, const char *prefix, jconfig_iterator_t *itr)
 {
   if(table == NULL)
   {
     return NULL;
   }
 
-  return (jconfig_iterator_t *)jutil_map_iterate(table->map, (jutil_map_data_t *)itr);
+  jutil_map_data_t *search = jutil_map_iterate(table->map, (jutil_map_data_t *)itr);
+
+  if(prefix == NULL || strlen(prefix) == 0)
+  {
+    return search;
+  }
+
+  while(search != NULL)
+  {
+    if(strncmp(search->index, prefix, strlen(prefix)) == 0)
+    {
+      return (jconfig_iterator_t *)search;
+    }
+
+    search = jutil_map_iterate(table->map, search);
+  }
+
+  return NULL;
 }
 
 //------------------------------------------------------------------------------

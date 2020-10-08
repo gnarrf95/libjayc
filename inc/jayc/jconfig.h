@@ -92,14 +92,17 @@ void jconfig_clear(jconfig_t *table);
 /**
  * @brief Iterates through all available datapoints.
  * 
- * @param table Config table to iterate.
- * @param itr   Iterator reference.
- *              If @c NULL , starts over.
+ * @param table   Config table to iterate.
+ * @param prefix  Only search for keys that start with prefix.
+ *                (Used for hierachrcal keys)
+ *                Ignored if @c NULL or @c "" .
+ * @param itr     Iterator reference.
+ *                If @c NULL , starts over.
  * 
- * @return      Next available element.
- * @return      @c NULL , if no more data.
+ * @return        Next available element.
+ * @return        @c NULL , if no more data.
  */
-jconfig_iterator_t *jconfig_iterate(jconfig_t *table, jconfig_iterator_t *itr);
+jconfig_iterator_t *jconfig_iterate(jconfig_t *table, const char *prefix, jconfig_iterator_t *itr);
 
 /**
  * @brief Returns key at datapoint referenced by iterator.

@@ -319,11 +319,6 @@ void jsys_cleanup(int exit_value, void *ctx)
   {
     jcon_server_free(g_data.server);
   }
-
-  if(g_data.logger)
-  {
-    jlog_session_free(g_data.logger);
-  }
 }
 
 //------------------------------------------------------------------------------

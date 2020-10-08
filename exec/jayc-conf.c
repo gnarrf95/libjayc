@@ -177,10 +177,15 @@ static int jaycConf_saveConfig(const char *file, int format);
 /**
  * @brief Prints all config data.
  * 
+ * @param         If hierarchical data, prefix
+ *                can be used to only search for
+ *                keys, that start with prefix.
+ *                If @c NULL , dump all keys.
+ * 
  * @return        @c true , if successful.
  * @return        @c false , if error occured.
  */
-static int jaycConf_dumpConfig();
+static int jaycConf_dumpConfig(const char *prefix);
 
 /**
  * @brief Handles CLI input.
@@ -454,11 +459,11 @@ int jaycConf_saveConfig(const char *file, int format)
 
 //------------------------------------------------------------------------------
 //
-int jaycConf_dumpConfig()
+int jaycConf_dumpConfig(const char *prefix)
 {
   jconfig_iterator_t *itr = NULL;
 
-  while( (itr = jconfig_iterate(g_data.config_data, itr)) != NULL )
+  while( (itr = jconfig_iterate(g_data.config_data, prefix, itr)) != NULL )
   {
     printf("\"%s\" = \"%s\"\n", jconfig_itr_getKey(itr), jconfig_itr_getData(itr));
   }
@@ -576,13 +581,19 @@ int jaycConf_cliHandler(const char **args, size_t arg_size, void *ctx)
   }
   else if(strcmp(args[0], JAYCCONF_CMD_DUMP) == 0)
   {
-    if(arg_size != 1)
+    if(arg_size > 2)
     {
       INFO("Invalid number of arguments for command [%s].", args[0]);
       return 0;
     }
 
-    jaycConf_dumpConfig();
+    const char *prefix = NULL;
+    if(arg_size == 2)
+    {
+      prefix = args[1];
+    }
+
+    jaycConf_dumpConfig(prefix);
     return 0;
   }
   else if(strcmp(args[0], JAYCCONF_CMD_EXIT) == 0)

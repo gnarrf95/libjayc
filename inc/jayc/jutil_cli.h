@@ -28,6 +28,9 @@ extern "C" {
  */
 typedef int(*jutil_cli_cmdHandler_t)(const char **args, size_t arg_size, void *ctx);
 
+/**
+ * @brief Session object.
+ */
 typedef struct __jutil_cli_session jutil_cli_t;
 
 /**

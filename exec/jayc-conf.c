@@ -18,6 +18,7 @@
 #include <jayc/jproc.h>
 #include <jayc/jlog_stdio.h>
 #include <jayc/jutil_args.h>
+#include <jayc/jutil_cli.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +51,7 @@
 #define JAYCCONF_CMD_DELETE "del"
 #define JAYCCONF_CMD_DUMP   "dmp"
 #define JAYCCONF_CMD_EXIT   "exit"
+#define JAYCCONF_CMD_HELP   "help"
 
 /*
  * States of CLI input parsing.
@@ -70,6 +72,7 @@ typedef struct __jaycConf_data
   int file_format;
 
   jconfig_t *config_data;
+  jutil_cli_t *cli;
 
   int log_level;
 
@@ -180,15 +183,20 @@ static int jaycConf_saveConfig(const char *file, int format);
 static int jaycConf_dumpConfig();
 
 /**
- * @brief Processing CMD read from stdin.
+ * @brief Handles CLI input.
  * 
- * @param cmd       CMD string.
- * @param cmd_size  CMD size.
+ * @param args      Arguments read from CLI.
+ * @param arg_size  Number of arguments read.
+ * @param ctx       Context pointer (not used).
  * 
- * @return          @c true , if successful.
- * @return          @c false , if error occured.
+ * @return          Always @c 0 .
  */
-static int jaycConf_processCMD(char *cmd);
+static int jaycConf_cliHandler(const char **args, size_t arg_size, void *ctx);
+
+/**
+ * @brief Prints information about CLI commands.
+ */
+static void jaycConf_cli_printHelp();
 
 
 
@@ -258,6 +266,7 @@ static jaycConf_data_t g_data =
   { 0 },
   JAYCCONF_FORMAT_RAW,
   NULL,
+  NULL,
   JLOG_LOGTYPE_INFO,
   true
 };
@@ -299,56 +308,10 @@ int main(int argc, char *argv[])
     }
   }
 
-  char *cmd_buf = NULL;
-  size_t cmd_size = 0;
+  g_data.cli = jutil_cli_init(&jaycConf_cliHandler, NULL);
   while(g_data.run)
   {
-    if(getline(&cmd_buf, &cmd_size, stdin) == -1)
-    {
-      ERROR("getline() failed.");
-      free(cmd_buf);
-      jproc_exit(JAYCCONF_EXIT_FAILURE);
-    }
-
-    if(cmd_buf[0] == '\n')
-    {
-      free(cmd_buf);
-      cmd_buf = NULL;
-      cmd_size = 0;
-      continue;
-    }
-
-    char *cmd_str = (char *)malloc(sizeof(char) * cmd_size);
-    if(cmd_str == NULL)
-    {
-      ERROR("malloc() failed.");
-      free(cmd_buf);
-      jproc_exit(JAYCCONF_EXIT_FAILURE);
-    }
-
-    memset(cmd_str, 0, cmd_size);
-    if(sscanf(cmd_buf, "%[^\n]\n", cmd_str) != 1)
-    {
-      ERROR("sscanf() failed.");
-      free(cmd_buf);
-      free(cmd_str);
-      jproc_exit(JAYCCONF_EXIT_FAILURE);
-    }
-
-    jaycConf_processCMD(cmd_str);
-
-    // if(jaycConf_processCMD(cmd_str) == false)
-    // {
-    //   ERROR("jaycConf_processCMD() failed.");
-    //   free(cmd_buf);
-    //   free(cmd_str);
-    //   jproc_exit(JAYCCONF_EXIT_FAILURE);
-    // }
-
-    free(cmd_buf);
-    free(cmd_str);
-    cmd_buf = NULL;
-    cmd_size = 0;
+    jutil_cli_run(g_data.cli);
   }
 
   jproc_exit(JAYCCONF_EXIT_SUCCESS);
@@ -378,10 +341,13 @@ void jaycConf_initData()
 //
 void jaycConf_freeData()
 {
-  jlog_global_session_free();
   if(g_data.config_data)
   {
     jconfig_free(g_data.config_data);
+  }
+  if(g_data.cli)
+  {
+    jutil_cli_free(g_data.cli);
   }
 }
 
@@ -502,7 +468,7 @@ int jaycConf_dumpConfig()
 
 //------------------------------------------------------------------------------
 //
-int jaycConf_processCMD(char *cmd)
+int jaycConf_cliHandler(const char **args, size_t arg_size, void *ctx)
 {
   /*
    * Commands:
@@ -513,195 +479,196 @@ int jaycConf_processCMD(char *cmd)
    * - del <key>            (Deletes key)
    * - dmp                  (Prints all config data)
    * - exit                 (Exit Program)
+   * - help                 (Get information about commands)
    */
 
-  char cmd_main[16] = { 0 };
-  char cmd_par1[128] = { 0 };
-  char cmd_par2[128] = { 0 };
-
-  const char *delimiter = " ";
-  int state = JAYCCONF_CMDSTATE_CMD;
-
-  char *cmd_buf = strtok(cmd, delimiter);
-  while(cmd_buf)
+  if(arg_size == 0)
   {
-    switch(state)
-    {
-      case JAYCCONF_CMDSTATE_CMD:
-      {
-        if(strlen(cmd_buf) >= sizeof(cmd_main))
-        {
-          INFO("Size of CMD name too long.");
-          return false;
-        }
-
-        memcpy(cmd_main, cmd_buf, strlen(cmd_buf));
-        break;
-      }
-      case JAYCCONF_CMDSTATE_PARAM1:
-      {
-        if(strlen(cmd_buf) >= sizeof(cmd_par1))
-        {
-          INFO("Size of parameter1 too long.");
-          return false;
-        }
-
-        memcpy(cmd_par1, cmd_buf, strlen(cmd_buf));
-        break;
-      }
-      case JAYCCONF_CMDSTATE_PARAM2:
-      {
-        if(strlen(cmd_buf) >= sizeof(cmd_par2))
-        {
-          INFO("Size of parameter2 too long.");
-          return false;
-        }
-
-        memcpy(cmd_par2, cmd_buf, strlen(cmd_buf));
-        break;
-      }
-
-      default:
-      {
-        ERROR("Invalid value for JAYCCONF_CMDSTATE [%d].", state);
-        return false;
-        // break;
-      }
-    }
-
-    cmd_buf = strtok(NULL, delimiter);
-    state++;
+    ERROR("arg_size is 0, something went wrong.");
+    return 0;
   }
 
-  DEBUG("Got [%d] command values.", state);
-
-  if(strlen(cmd_main) == 0)
+  if(strcmp(args[0], JAYCCONF_CMD_LOAD) == 0)
   {
-    INFO("No command name.");
-    return false;
-  }
-
-  if(strcmp(cmd_main, JAYCCONF_CMD_LOAD) == 0)
-  {
-    if(strlen(cmd_par1) == 0)
+    if(arg_size != 3)
     {
-      INFO("Missing arguments for command [%s].", cmd_main);
-      return false;
-    }
-    if(strlen(cmd_par2) == 0)
-    {
-      INFO("Missing arguments for command [%s].", cmd_main);
-      return false;
+      INFO("Invalid number of arguments for command [%s].", args[0]);
+      return 0;
     }
 
-    if(jaycConf_loadConfig(cmd_par1, atoi(cmd_par2)))
+    if(jaycConf_loadConfig(args[1], atoi(args[2])))
     {
       printf("OK\n\n");
-      return true;
+      return 0;
     }
 
     printf("Could not load config.");
-    return false;
+    return 0;
   }
-  else if(strcmp(cmd_main, JAYCCONF_CMD_SAVE) == 0)
+  else if(strcmp(args[0], JAYCCONF_CMD_SAVE) == 0)
   {
-    if(strlen(cmd_par1) == 0)
+    if(arg_size != 3)
     {
-      INFO("Missing arguments for command [%s].", cmd_main);
-      return false;
-    }
-    if(strlen(cmd_par2) == 0)
-    {
-      INFO("Missing arguments for command [%s].", cmd_main);
-      return false;
+      INFO("Invalid number of arguments for command [%s].", args[0]);
+      return 0;
     }
 
-    if(jaycConf_saveConfig(cmd_par1, atoi(cmd_par2)))
+    if(jaycConf_saveConfig(args[1], atoi(args[2])))
     {
       printf("OK\n\n");
-      return true;
+      return 0;
     }
 
-    printf("Could not save config.");
-    return false;
+    printf("Could not load config.");
+    return 0;
   }
-  else if(strcmp(cmd_main, JAYCCONF_CMD_SET) == 0)
+  else if(strcmp(args[0], JAYCCONF_CMD_SET) == 0)
   {
-    if(strlen(cmd_par1) == 0)
+    if(arg_size != 3)
     {
-      INFO("Missing arguments for command [%s].", cmd_main);
-      return false;
-    }
-    if(strlen(cmd_par2) == 0)
-    {
-      INFO("Missing arguments for command [%s].", cmd_main);
-      return false;
+      INFO("Invalid number of arguments for command [%s].", args[0]);
+      return 0;
     }
 
-    if(jconfig_datapoint_set(g_data.config_data, cmd_par1, cmd_par2))
+    if(jconfig_datapoint_set(g_data.config_data, args[1], args[2]))
     {
       printf("OK\n\n");
-      return true;
+      return 0;
     }
 
     printf("Could not set value.");
-    return false;
+    return 0;
   }
-  else if(strcmp(cmd_main, JAYCCONF_CMD_GET) == 0)
+  else if(strcmp(args[0], JAYCCONF_CMD_GET) == 0)
   {
-    if(strlen(cmd_par1) == 0)
+    if(arg_size != 2)
     {
-      INFO("Missing arguments for command [%s].", cmd_main);
-      return false;
-    }
-    if(strlen(cmd_par2) != 0)
-    {
-      INFO("Too many arguments for command [%s].", cmd_main);
-      return false;
+      INFO("Invalid number of arguments for command [%s].", args[0]);
+      return 0;
     }
 
-    const char *value = jconfig_datapoint_get(g_data.config_data, cmd_par1);
+    const char *value = jconfig_datapoint_get(g_data.config_data, args[1]);
     if(value == NULL)
     {
-      INFO("Did not find key [%s].", cmd_par1);
-      return false;
+      INFO("Did not find key [%s].", args[1]);
+      return 0;
     }
 
-    printf("\"%s\" = \"%s\"\n\n", cmd_par1, value);
-    return true;
+    printf("\"%s\" = \"%s\"\n\n", args[1], value);
+    return 0;
   }
-  else if(strcmp(cmd_main, JAYCCONF_CMD_DELETE) == 0)
+  else if(strcmp(args[0], JAYCCONF_CMD_DELETE) == 0)
   {
-    if(strlen(cmd_par1) == 0)
+    if(arg_size != 2)
     {
-      INFO("Missing arguments for command [%s].", cmd_main);
-      return false;
-    }
-    if(strlen(cmd_par2) != 0)
-    {
-      INFO("Too many arguments for command [%s].", cmd_main);
-      return false;
+      INFO("Invalid number of arguments for command [%s].", args[0]);
+      return 0;
     }
 
-    if(jconfig_datapoint_delete(g_data.config_data, cmd_par1))
+    if(jconfig_datapoint_delete(g_data.config_data, args[1]))
     {
       printf("OK\n\n");
-      return true;
+      return 0;
     }
 
-    printf("Could not delete key.");
-    return false;
+    printf("Could not delete key [%s].", args[1]);
+    return 0;
   }
-  else if(strcmp(cmd_main, JAYCCONF_CMD_DUMP) == 0)
+  else if(strcmp(args[0], JAYCCONF_CMD_DUMP) == 0)
   {
-    return jaycConf_dumpConfig();
+    if(arg_size != 1)
+    {
+      INFO("Invalid number of arguments for command [%s].", args[0]);
+      return 0;
+    }
+
+    jaycConf_dumpConfig();
+    return 0;
   }
-  else if(strcmp(cmd_main, JAYCCONF_CMD_EXIT) == 0)
+  else if(strcmp(args[0], JAYCCONF_CMD_EXIT) == 0)
   {
+    if(arg_size != 1)
+    {
+      INFO("Invalid number of arguments for command [%s].", args[0]);
+      return 0;
+    }
+
     g_data.run = false;
-    return true;
+    return 0;
   }
-  
-  INFO("Invalid command [%s].", cmd_main);
-  return false;
+  else if(strcmp(args[0], JAYCCONF_CMD_HELP) == 0)
+  {
+    if(arg_size != 1)
+    {
+      INFO("Invalid number of arguments for command [%s].", args[0]);
+      return 0;
+    }
+
+    jaycConf_cli_printHelp();
+    return 0;
+  }
+  else
+  {
+    INFO("Invalid command [%s].", args[0]);
+    return 0;
+  }
+}
+
+//------------------------------------------------------------------------------
+//
+void jaycConf_cli_printHelp()
+{
+  /*
+   * Commands:
+   * - lod <file> <format>  (Loads config from file)
+   * - sav <file> <format>  (Saves config to file)
+   * - set <key> <value>    (Sets value)
+   * - get <key>            (Print key)
+   * - del <key>            (Deletes key)
+   * - dmp                  (Prints all config data)
+   * - exit                 (Exit Program)
+   * - help                 (Get information about commands)
+   */
+
+  printf("## [CLI COMMANDS] ##\n\n");
+
+  printf("# lod <file> <format>\n");
+  printf("  Load configuration from file.\n");
+  printf("  - file : File to read.\n");
+  printf("  - format : File format to parse.\n");
+  printf("\n");
+
+  printf("# sav <file> <format>\n");
+  printf("  Save configuration to file.\n");
+  printf("  - file : File to write to.\n");
+  printf("  - format : File format to parse.\n");
+  printf("\n");
+
+  printf("# set <key> <value>\n");
+  printf("  Set key in config to value.\n");
+  printf("  - key : Key of datapoint.\n");
+  printf("  - value : Value to set datapoint to.\n");
+  printf("\n");
+
+  printf("# get <key>\n");
+  printf("  Print key with value.\n");
+  printf("  - key : Key of datapoint to print.\n");
+  printf("\n");
+
+  printf("# del <key>\n");
+  printf("  Delete datapoint from configuration.\n");
+  printf("  - key : Key of datapoint to delete.\n");
+  printf("\n");
+
+  printf("# dmp\n");
+  printf("  Print whole configuration.\n");
+  printf("\n");
+
+  printf("# exit\n");
+  printf("  Exit program.\n");
+  printf("\n");
+
+  printf("# help\n");
+  printf("  Print this information.\n");
+  printf("\n");
 }

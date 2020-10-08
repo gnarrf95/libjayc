@@ -92,8 +92,9 @@ void jcon_socket_close(jcon_socket_t *session);
  * closes the session.
  * 
  * @param session Session to check.
- * @param timeout Timeout for @c poll() . Stops blocking,
- *                if no new input was detected in time.
+ * @param timeout Timeout for @c poll() in milliseconds.
+ *                Stops blocking, if no new input was
+ *                detected in time.
  * 
  * @return        @c true , if new input is available.
  * @return        @c false , if @c poll() timed out,

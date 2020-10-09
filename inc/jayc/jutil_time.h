@@ -109,10 +109,14 @@ int jutil_time_getCurrentTimeString(char *str_buf, size_t str_size);
 /**
  * @brief Suspends current thread for specified amount of time.
  * 
- * @param secs      Seconds to sleep.
- * @param nanosecs  Additional nanoseconds to sleep.
+ * @param secs        Seconds to sleep.
+ * @param nanosecs    Additional nanoseconds to sleep.
+ * @param exit_on_int If @c true , will exit when interrupt signal
+ *                    arrives.
+ *                    If @c false , will keep going until
+ *                    time has elapsed.
  */
-void jutil_time_sleep(long secs, long nanosecs);
+void jutil_time_sleep(long secs, long nanosecs, int exit_on_int);
 
 
 

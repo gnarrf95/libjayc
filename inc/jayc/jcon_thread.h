@@ -151,6 +151,10 @@ jcon_thread_t *jcon_thread_init
 /**
  * @brief Stops thread and frees session memory.
  * 
+ * <b>Note:</b>
+ * Function does not free memory of client.
+ * Client must be handled manually!
+ * 
  * @param session Session object to free.
  */
 void jcon_thread_free(jcon_thread_t *session);

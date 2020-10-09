@@ -12,6 +12,9 @@ static int run_server = 1;
 
 static jcon_socket_t *socket = NULL;
 
+static void signal_handler(int signum, void *ctx);
+static void exit_handler(int exit_value, void *ctx);
+
 static void example_client()
 {
   int ret_check;
@@ -160,13 +163,13 @@ static void example_server()
   socket = NULL;
 }
 
-static void signal_handler(int signum, void *ctx)
+void signal_handler(int signum, void *ctx)
 {
   JLOG_INFO("Signal [%d] caught, stopping server.", signum);
   run_server = 0;
 }
 
-static void exit_handler(int exit_value, void *ctx)
+void exit_handler(int exit_value, void *ctx)
 {
   if(socket != NULL)
   {

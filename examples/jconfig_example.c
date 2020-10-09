@@ -72,7 +72,7 @@ int main()
   }
 
   // Read config point.
-  char *cp = jconfig_datapoint_get(g_config, "server.address.port");
+  const char *cp = jconfig_datapoint_get(g_config, "server.address.port");
   if(cp == NULL)
   {
     JLOG_ERROR("Could not read datapoint.");

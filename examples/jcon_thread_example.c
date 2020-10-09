@@ -107,7 +107,7 @@ void data_handler(void *ctx, jcon_client_t *client)
   if(ret_check == 0)
   {
     JLOG_ERROR("Could not send data.");
-    return.
+    return;
   }
 }
 

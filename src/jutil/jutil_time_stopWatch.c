@@ -97,6 +97,32 @@ unsigned long jutil_time_stopWatch_reset(jutil_time_stopWatch_t *session)
 
 //------------------------------------------------------------------------------
 //
+unsigned long jutil_time_stopWatch_check(jutil_time_stopWatch_t *session)
+{
+  if(session == NULL)
+  {
+    return 0;
+  }
+
+  struct timespec tmp;
+
+  if(clock_gettime(CLOCK_MONOTONIC, &tmp) < 0)
+  {
+    ERROR("clock_gettime() failed [%d : %s].", errno, strerror(errno));
+    return 0;
+  }
+
+  double diff_ns = tmp.tv_nsec - session->time_buffer.tv_nsec;
+  double diff_sec = tmp.tv_sec - session->time_buffer.tv_sec;
+
+  /* Time difference in milliseconds. */
+  unsigned long ret = (unsigned long)(diff_ns / 1000000) + (unsigned long)(diff_sec * 1000);
+
+  return ret;
+}
+
+//------------------------------------------------------------------------------
+//
 void jutil_time_stopWatch_free(jutil_time_stopWatch_t *session)
 {
   if(session)

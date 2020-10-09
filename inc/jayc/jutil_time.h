@@ -48,6 +48,16 @@ jutil_time_stopWatch_t *jutil_time_stopWatch_init();
 unsigned long jutil_time_stopWatch_reset(jutil_time_stopWatch_t *session);
 
 /**
+ * @brief Get milliseconds since last reset, without resetting.
+ * 
+ * @param session Session object.
+ * 
+ * @return        Time since last reset in milliseconds.
+ * @return        @c 0 , if error occured.
+ */
+unsigned long jutil_time_stopWatch_check(jutil_time_stopWatch_t *session);
+
+/**
  * @brief Free memory of stop watch session object.
  * 
  * @param session Session to free.

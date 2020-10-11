@@ -38,8 +38,9 @@
  */
 struct __jutil_cli_session
 {
-  jutil_cli_cmdHandler_t handler; /**< Handler to call, when data recieved. */
-  void *session_ctx;              /**< Context pointer to pass to handler. */
+  jutil_cli_cmdHandler_t handler;                 /**< Handler to call, when data recieved. */
+  jutil_cli_getInputFunction_t function_getInput; /**< Function to get input for processing. */
+  void *session_ctx;                              /**< Context pointer to pass to handler. */
 };
 
 
@@ -66,14 +67,22 @@ struct __jutil_cli_session
 //
 
 /**
- * @brief Reads line from input stream.
+ * @brief Default getInput function.
  * 
- * @param input_stream  Input stream to read from.
+ * If @c jutil_cli_t#function_getInput() is @c NULL ,
+ * this function is used.
  * 
- * @return              Allocated string with input.
- * @return              @c NULL , if empty input or error occured.
+ * Reads line from stdin and passes string without newline byte
+ * to @c *buf_ptr . Sets @c *buf_size to size of buffer.
+ * 
+ * @param ctx       Context pointer (not used).
+ * @param buf_ptr   Pointer to string buffer.
+ * @param buf_size  Size of buffer.
+ * 
+ * @return          @c true , if function was successful.
+ * @return          @c false , if empty line or error occured.
  */
-static char *jutil_cli_getInputString(FILE *input_stream);
+static int jutil_cli_getInput_default(void *ctx, char **buf_ptr, size_t *buf_size);
 
 
 
@@ -83,7 +92,7 @@ static char *jutil_cli_getInputString(FILE *input_stream);
 
 //------------------------------------------------------------------------------
 //
-jutil_cli_t *jutil_cli_init(jutil_cli_cmdHandler_t handler, void *ctx)
+jutil_cli_t *jutil_cli_init(jutil_cli_cmdHandler_t handler, jutil_cli_getInputFunction_t input_function, void *ctx)
 {
   if(handler == NULL)
   {
@@ -97,6 +106,7 @@ jutil_cli_t *jutil_cli_init(jutil_cli_cmdHandler_t handler, void *ctx)
   }
 
   session->handler = handler;
+  session->function_getInput = input_function;
   session->session_ctx = ctx;
 
   return session;
@@ -118,8 +128,23 @@ void jutil_cli_free(jutil_cli_t *session)
 //
 int jutil_cli_run(jutil_cli_t *session)
 {
-  char *cmd_str = jutil_cli_getInputString(stdin);
-  if(cmd_str == NULL)
+  if(session == NULL)
+  {
+    return false;
+  }
+
+  char *cmd_str = NULL;
+  size_t buf_size = 0;
+  
+  /* Fetch input function or use default. */
+  jutil_cli_getInputFunction_t f_getline = &jutil_cli_getInput_default;
+  if(session->function_getInput)
+  {
+    f_getline = session->function_getInput;
+  }
+
+  /* Get input. */
+  if(f_getline(session->session_ctx, &cmd_str, &buf_size) == false)
   {
     return false;
   }
@@ -180,13 +205,18 @@ int jutil_cli_run(jutil_cli_t *session)
 
 //------------------------------------------------------------------------------
 //
-char *jutil_cli_getInputString(FILE *input_stream)
+int jutil_cli_getInput_default(void *ctx, char **buf_ptr, size_t *buf_size)
 {
+  if(buf_ptr == NULL || buf_size == NULL)
+  {
+    return false;
+  }
+
   char *line_ptr = NULL;
   size_t line_size = 0;
 
   /* Read line. */
-  if(getline(&line_ptr, &line_size, input_stream) < 0)
+  if(getline(&line_ptr, &line_size, stdin) < 0)
   {
     if(errno == EINTR)
     {
@@ -197,36 +227,36 @@ char *jutil_cli_getInputString(FILE *input_stream)
       ERROR("getline() failed [%d : %s].", errno, strerror(errno));
     }
     free(line_ptr);
-    return NULL;
+    return false;
   }
 
   /* Check for empty lines. */
   if(line_ptr[0] == '\n')
   {
     free(line_ptr);
-    return NULL;
+    return false;
   }
 
-  /* Create buffer. */
-  char *cmd_str = (char *)malloc(sizeof(char) * line_size);
-  if(cmd_str == NULL)
+  /* Allocate buffer. */
+  *buf_size = line_size - 1;
+  *buf_ptr = (char *)malloc(sizeof(char) * (*buf_size));
+  if(*buf_ptr == NULL)
   {
     ERROR("malloc() failed.");
     free(line_ptr);
-    return NULL;
+    return false;
   }
 
-  /* Remove newline byte. */
-  memset(cmd_str, 0, line_size);
-  if(sscanf(line_ptr, "%[^\n]\n", cmd_str) != 1)
+  /* Copy buffer without newline byte.*/
+  memset(*buf_ptr, 0, *buf_size);
+  if(sscanf(line_ptr, "%[^\n]\n", *buf_ptr) != 1)
   {
-    ERROR("sscanf() failed.");
+    ERROR("sscanf() failed [%d : %s].", errno, strerror(errno));
     free(line_ptr);
-    free(cmd_str);
+    free(*buf_ptr);
     return false;
   }
 
   free(line_ptr);
-
-  return cmd_str;
+  return true;
 }

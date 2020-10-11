@@ -93,7 +93,7 @@ int jutil_time_getCurrentTimeString(char *str_buf, size_t str_size)
 
 //------------------------------------------------------------------------------
 //
-void jutil_time_sleep(long secs, long nanosecs)
+void jutil_time_sleep(long secs, long nanosecs, int exit_on_int)
 {
   if(nanosecs > 999999999L)
   {
@@ -122,6 +122,11 @@ void jutil_time_sleep(long secs, long nanosecs)
       if(errno == EINTR)
       {
         DEBUG("nanosleep() interrupted.");
+
+        if(exit_on_int)
+        {
+          run = false;
+        }
         sleep_time = sleep_time_rem;
       }
       else

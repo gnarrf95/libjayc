@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  g_data.cli = jutil_cli_init(&jaycConf_cliHandler, NULL);
+  g_data.cli = jutil_cli_init(&jaycConf_cliHandler, NULL, NULL);
   while(g_data.run)
   {
     jutil_cli_run(g_data.cli);

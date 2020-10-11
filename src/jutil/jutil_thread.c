@@ -405,7 +405,7 @@ void *jutil_thread_pthread_handler(void *ctx)
     int ret_loop = session->loop_function(session->ctx, session);
 
     /* Sleep. */
-    jutil_time_sleep(0, session->loop_sleep);
+    jutil_time_sleep(0, session->loop_sleep, false);
 
     /* Check, if thread should exit. */
     jutil_thread_pmutex_lock(session);

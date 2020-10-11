@@ -346,10 +346,13 @@ int jutil_args_validateOption(jutil_args_option_t option)
     return false;
   }
 
-  if(strcmp(option.tag_long, "help") == 0 || strcmp(option.tag_long, "version") == 0)
+  if(option.tag_long)
   {
-    ERROR("Tag [--%s] already used by jutil_args.", option.tag_long);
-    return false;
+    if(strcmp(option.tag_long, "help") == 0 || strcmp(option.tag_long, "version") == 0)
+    {
+      ERROR("Tag [--%s] already used by jutil_args.", option.tag_long);
+      return false;
+    }
   }
 
   size_t size_param = jutil_args_optionParam_getSize(option.params);

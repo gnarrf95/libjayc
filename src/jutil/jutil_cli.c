@@ -69,11 +69,14 @@ struct __jutil_cli_session
 /**
  * @brief Default getInput function.
  * 
- * If @c jutil_cli_t#function_getInput() is @c NULL ,
+ * If @c jutil_cli_t#function_getInput is @c NULL ,
  * this function is used.
  * 
  * Reads line from stdin and passes string without newline byte
  * to @c *buf_ptr . Sets @c *buf_size to size of buffer.
+ * 
+ * @c *buf_ptr should be @c NULL and *buf_size should be
+ * @c 0 . Buffer is allocated by function.
  * 
  * @param ctx       Context pointer (not used).
  * @param buf_ptr   Pointer to string buffer.

@@ -141,6 +141,7 @@ jcon_thread_t *jcon_thread_init
   (
     jcon_thread_run_function,
     logger,
+    0,
     JCON_THREAD_LOOPSLEEP_DEFAULT,
     session
   );

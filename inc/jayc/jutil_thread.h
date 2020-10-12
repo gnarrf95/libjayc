@@ -38,7 +38,6 @@ typedef struct __jutil_thread_session jutil_thread_t;
  * 
  * This function will be passed to session at initialization.
  * Tells thread what to do each iteration.
- * If return is 1, tells handler that the thread is finished.
  * 
  * @param ctx Context used by implementation.
  * 
@@ -52,14 +51,15 @@ typedef int(*jutil_thread_loop_function_t)(void *ctx, jutil_thread_t *thread_ses
  * 
  * @param function  Function, that will be called in thread loop.
  * @param logger    Logger to use for debug and error messages.
- * @param sleep_ns  How long thread should sleep between loop executions.
- *                  In nanoseconds.
+ * @param sleep_s   How long thread should sleep between loop executions.
+ *                  In seconds.
+ * @param sleep_ns  Additional nanoseconds to wait before loop executions.
  * @param ctx       Context passed to loop function.
  * 
  * @return          Session object.
  * @return          @c NULL in case of error.
  */
-jutil_thread_t *jutil_thread_init(jutil_thread_loop_function_t function, jlog_t *logger, long sleep_ns, void *ctx);
+jutil_thread_t *jutil_thread_init(jutil_thread_loop_function_t function, jlog_t *logger, long sleep_s, long sleep_ns, void *ctx);
 
 /**
  * @brief Frees memory of session.

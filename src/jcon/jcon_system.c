@@ -245,6 +245,7 @@ jcon_system_t *jcon_system_init
   (
     jcon_system_control_function,
     logger,
+    0,
     JCON_SYSTEM_LOOPSLEEP_DEFAULT,
     session
   );

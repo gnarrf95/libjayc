@@ -169,7 +169,10 @@ struct __jutil_thread_session
   pthread_t thread;                           /**< pthread instance. */
   pthread_mutex_t mutex;                      /**< pthread_mutex instance. */
   jutil_thread_loop_function_t loop_function; /**< User provided function to run in loop. */
-  long loop_sleep;                            /**< How long the loop will wait (in nanoseconds), before continuing. */
+  
+  long sleep_secs;                            /**< How long the loop will wait (in seconds), before continuing. */
+  long sleep_nsecs;                           /**< Additional nanoseconds to wait before continuing. */
+  
   jlog_t *logger;                             /**< Logger used for debug and error messages. */
 
   int thread_state;                           /**< State of thread. Enumeration with following values:
@@ -190,7 +193,7 @@ struct __jutil_thread_session
 
 //------------------------------------------------------------------------------
 //
-jutil_thread_t *jutil_thread_init(jutil_thread_loop_function_t function, jlog_t *logger, long sleep_ns, void *ctx)
+jutil_thread_t *jutil_thread_init(jutil_thread_loop_function_t function, jlog_t *logger, long sleep_s, long sleep_ns, void *ctx)
 {
   if(function == NULL)
   {
@@ -207,7 +210,8 @@ jutil_thread_t *jutil_thread_init(jutil_thread_loop_function_t function, jlog_t 
 
   session->thread = 0;
   session->loop_function = function;
-  session->loop_sleep = sleep_ns;
+  session->sleep_secs = sleep_s;
+  session->sleep_nsecs = sleep_ns;
   session->logger = logger;
   session->thread_state = JUTIL_THREAD_STATE_STOPPED;
   session->ctx = ctx;
@@ -405,7 +409,7 @@ void *jutil_thread_pthread_handler(void *ctx)
     int ret_loop = session->loop_function(session->ctx, session);
 
     /* Sleep. */
-    jutil_time_sleep(0, session->loop_sleep, false);
+    jutil_time_sleep(session->sleep_secs, session->sleep_nsecs, false);
 
     /* Check, if thread should exit. */
     jutil_thread_pmutex_lock(session);

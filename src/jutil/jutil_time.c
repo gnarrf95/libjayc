@@ -95,18 +95,22 @@ int jutil_time_getCurrentTimeString(char *str_buf, size_t str_size)
 //
 void jutil_time_sleep(long secs, long nanosecs, int exit_on_int)
 {
+  if(secs < 0)
+  {
+    secs = 0;
+  }
+
   if(nanosecs > 999999999L)
   {
-    nanosecs = 999999999L;
+    long ns_tmp = nanosecs;
+    nanosecs = ns_tmp % 1000000000L;
+
+    ns_tmp -= nanosecs;
+    secs += ns_tmp / 1000000000L;
   }
   else if(nanosecs < 0)
   {
     nanosecs = 0;
-  }
-
-  if(secs < 0)
-  {
-    secs = 0;
   }
 
   struct timespec sleep_time_rem;

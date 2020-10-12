@@ -57,7 +57,7 @@ jutil_map_t *jutil_map_init();
 void jutil_map_free(jutil_map_t *map);
 
 /**
- * @brief Add data to map index by @c index .
+ * @brief Add data to map at @c index .
  * 
  * @param map   Map object.
  * @param index Index for new data.
@@ -103,7 +103,7 @@ int jutil_map_contains(jutil_map_t *map, const char *index);
 void *jutil_map_get(jutil_map_t *map, const char *index);
 
 /**
- * @brief Change data stored with index.
+ * @brief Change data stored at index.
  * 
  * If index is not contained in map,
  * new entry is created.

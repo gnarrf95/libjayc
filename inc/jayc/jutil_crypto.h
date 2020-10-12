@@ -24,7 +24,7 @@ extern "C" {
  * @param input       Input string.
  * @param size_input  Size of input string.
  * @param output      Buffer to save output.
- *                    Must be at least buffer size <tt>char buf[16]</tt>.
+ *                    Must be at least size <tt>char buf[16]</tt>.
  * 
  * @return            @c true , if successful.
  * @return            @c false , if error occured.
@@ -37,7 +37,7 @@ int jutil_crypto_md5_raw(const char *input, size_t size_input, unsigned char *ou
  * @param input       Input string.
  * @param size_input  Size of input string.
  * @param output      Buffer to save output.
- *                    Must be at least buffer size <tt>char buf[33]</tt>.
+ *                    Must be at least size <tt>char buf[33]</tt>.
  * 
  * @return            @c true , if successful.
  * @return            @c false , if error occured.
@@ -50,7 +50,7 @@ int jutil_crypto_md5_str(const char *input, size_t size_input, char *output);
  * @param input       Input string.
  * @param size_input  Size of input string.
  * @param output      Buffer to save output.
- *                    Must be at least buffer size <tt>char buf[32]</tt>
+ *                    Must be at least size <tt>char buf[32]</tt>
  * 
  * @return            @c true , if successful.
  * @return            @c false , if error occured.
@@ -63,7 +63,7 @@ int jutil_crypto_sha256_raw(const char *input, size_t size_input, unsigned char 
  * @param input       Input string.
  * @param size_input  Size of input string.
  * @param output      Buffer to save output.
- *                    Must be at least buffer size <tt>char buf[65]</tt>
+ *                    Must be at least size <tt>char buf[65]</tt>
  * 
  * @return            @c true , if successful.
  * @return            @c false , if error occured.
@@ -76,7 +76,7 @@ int jutil_crypto_sha256_str(const char *input, size_t size_input, char *output);
  * @param input       Input string.
  * @param size_input  Size of input string.
  * @param output      Buffer to save output.
- *                    Must be at least buffer size <tt>char buf[64]</tt>
+ *                    Must be at least size <tt>char buf[64]</tt>
  * 
  * @return            @c true , if successful.
  * @return            @c false , if error occured.
@@ -89,7 +89,7 @@ int jutil_crypto_sha512_raw(const char *input, size_t size_input, unsigned char 
  * @param input       Input string.
  * @param size_input  Size of input string.
  * @param output      Buffer to save output.
- *                    Must be at least buffer size <tt>char buf[129]</tt>
+ *                    Must be at least size <tt>char buf[129]</tt>
  * 
  * @return            @c true , if successful.
  * @return            @c false , if error occured.

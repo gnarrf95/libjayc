@@ -2,7 +2,7 @@
  * @file jconfig.h
  * @author Manuel Nadji (https://github.com/gnarrf95)
  * 
- * @brief This is a concept for the jconfig interface.
+ * @brief Interface for managing config data.
  * 
  * <b>Note:</b>
  * Data in config is allocated and copied.
@@ -93,8 +93,8 @@ void jconfig_clear(jconfig_t *table);
  * @brief Iterates through all available datapoints.
  * 
  * @param table   Config table to iterate.
- * @param prefix  Only search for keys that start with prefix.
- *                (Used for hierachrcal keys)
+ * @param prefix  Only search for keys that start with prefix
+ *                (used for hierachrcal keys).
  *                Ignored if @c NULL or @c "" .
  * @param itr     Iterator reference.
  *                If @c NULL , starts over.

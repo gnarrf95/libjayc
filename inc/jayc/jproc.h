@@ -5,8 +5,8 @@
  * @brief Component for process control.
  * 
  * This component is used to manage the running process.
- * It includes custom exit functions to free global memory,
- * Signal catching and handling fork and child-processes.
+ * It includes custom exit functions to free global memory
+ * and signal catching.
  * 
  * @date 2020-10-01
  * @copyright Copyright (c) 2020 by Manuel Nadji

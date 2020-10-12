@@ -33,7 +33,7 @@ typedef int(*jutil_cli_cmdHandler_t)(const char **args, size_t arg_size, void *c
  * 
  * Inspired by @c getline() function.
  * Compared to @c getline() , this function
- * must returns string without newline character.
+ * must return string without newline character.
  * 
  * @c *buf_ptr should be set to @c NULL before call.
  * Function should allocate buffer for string and
@@ -56,11 +56,13 @@ typedef struct __jutil_cli_session jutil_cli_t;
 /**
  * @brief Initializes session.
  * 
- * @param handler Handler function to be called, when input is recieved.
- * @param ctx     Session context pointer.
+ * @param handler         Handler function to be called, when input is recieved.
+ * @param input function  Function to get input.
+ *                        If @c NULL , gets line input from stdin.
+ * @param ctx             Session context pointer.
  * 
- * @return        New session object.
- * @return        @c NULL , if error occured.
+ * @return                New session object.
+ * @return                @c NULL , if error occured.
  */
 jutil_cli_t *jutil_cli_init(jutil_cli_cmdHandler_t handler, jutil_cli_getInputFunction_t input_function, void *ctx);
 

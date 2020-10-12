@@ -23,8 +23,19 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Maximum number of parameters a option can have.
+ */
 #define JUTIL_ARGS_OPTIONPARAM_MAXSIZE 16
+
+/**
+ * @brief End of parameter definition.
+ */
 #define JUTIL_ARGS_OPTIONPARAM_END {NULL,NULL}
+
+/**
+ * @brief Defines, that option does not have any parameters.
+ */
 #define JUTIL_ARGS_OPTIONPARAM_EMPTY {{NULL,NULL}}
 
 /**

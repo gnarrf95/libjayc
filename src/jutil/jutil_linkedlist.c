@@ -13,6 +13,17 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+/**
+ * @brief Create a node.
+ * 
+ * Allocates memory for node, sets @c jutil_linkedlist_t#data
+ * and @c jutil_linkedlist_t#next to @c NULL .
+ * 
+ * @return  Pointer to new node.
+ * @return  @c NULL in case of error.
+ */
+static jutil_linkedlist_t *jutil_linkedlist_allocNode();
+
 struct __jutil_linkedlist
 {
   void *data;

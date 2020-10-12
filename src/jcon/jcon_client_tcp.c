@@ -296,7 +296,7 @@ int jcon_client_tcp_reset(void *ctx)
     return false;
   }
 
-  if(jcon_client_isConnected(ctx))
+  if(jcon_client_tcp_isConnected(ctx))
   {
     jcon_client_tcp_close(ctx);
   }

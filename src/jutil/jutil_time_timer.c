@@ -132,6 +132,8 @@ void jutil_time_timer_free(jutil_time_timer_t *session)
     return;
   }
 
+  jutil_time_timer_stop(session);
+
   if(timer_delete(session->timer_id) < 0)
   {
     ERROR("timer_delete() failed [%d : %s].", errno, strerror(errno));

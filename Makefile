@@ -99,6 +99,10 @@ $(TARGET_LIBJAYC): $(OBJ)
 
 # ------------------------------------------------------------------------------
 # Library Installation
+.PHONY: install_dev
+install_dev: install_lib install_inc
+	@echo "Ready for development."
+
 .PHONY: install
 install: install_lib install_inc install_bin install_sbin
 	@echo "Installation finished."

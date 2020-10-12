@@ -35,7 +35,7 @@
 
 #define JAYC_VERSION_MAJOR  1
 #define JAYC_VERSION_MINOR  0
-#define JAYC_VERSION_PATCH  0
+#define JAYC_VERSION_PATCH  1
 
 #if defined(JAYC_VERSION_ALPHA)
   #define JAYC_VERSION_NOTE "alpha"

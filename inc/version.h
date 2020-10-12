@@ -29,8 +29,12 @@
 // JAYC Library version.
 //
 
+// #define JAYC_VERSION_ALPHA
+// #define JAYC_VERSION_BETA
+// #define JAYC_VERSION_STABLE
+
 #define JAYC_VERSION_MAJOR  0
-#define JAYC_VERSION_MINOR  7
+#define JAYC_VERSION_MINOR  9
 #define JAYC_VERSION_PATCH  0
 
 #if defined(JAYC_VERSION_ALPHA)

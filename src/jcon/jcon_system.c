@@ -88,17 +88,6 @@ static int jcon_system_control_function(void *ctx, jutil_thread_t *thread_handle
  */
 static int jcon_system_resetServer(jcon_system_t *session);
 
-
-/**
- * @brief Stops server.
- * 
- * Currently not used.
- * Server should be stopped outside of system.
- * 
- * @param session System session.
- */
-// static void jcon_system_closeServer(jcon_system_t *session);
-
 /**
  * @brief Manages new connections.
  * 
@@ -455,27 +444,6 @@ int jcon_system_resetServer(jcon_system_t *session)
 
   return ret;
 }
-
-/*
-//------------------------------------------------------------------------------
-//
-void jcon_system_closeServer(jcon_system_t *session)
-{
-  if(session == NULL)
-  {
-    ERROR(NULL, "Session is NULL.");
-    return;
-  }
-
-  if(session->server == NULL)
-  {
-    ERROR(NULL, "Server is NULL.");
-    return;
-  }
-
-  jcon_server_close(session->server);
-}
-*/
 
 
 

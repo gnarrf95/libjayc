@@ -638,48 +638,6 @@ void jutil_args_printHelp(jutil_args_ctx_t *ctx)
   printf("%s\n\n", ctx->prog_desc->copyright_info);
 }
 
-/*
-//------------------------------------------------------------------------------
-//
-void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)
-{
-  char *prog_name = ctx->argv[0];
-  
-  fprintf(output, "Usage: %s\n", prog_name);
-
-  size_t ctr;
-  for(ctr = 0; ctr < ctx->opt_number; ctr++)
-  {
-    jutil_args_option_t op = ctx->options[ctr];
-
-    fprintf(output, "       [");
-
-    if(op.tag_long && op.tag_short)
-    {
-      fprintf(output, "-%c/--%s]", op.tag_short, op.tag_long);
-    }
-    else if(op.tag_long)
-    {
-      fprintf(output, "--%s]", op.tag_long);
-    }
-    else
-    {
-      fprintf(output, "-%c]", op.tag_short);
-    }
-
-    size_t size_args = jutil_args_optionParam_getSize(op.params);
-
-    size_t ctr_args;
-    for(ctr_args = 0; ctr_args < size_args; ctr_args++)
-    {
-      fprintf(stdout, " <%s>", op.params[ctr_args].name);
-    }
-
-    fprintf(output, "\n");
-  }
-}
-*/
-
 //------------------------------------------------------------------------------
 //
 void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)

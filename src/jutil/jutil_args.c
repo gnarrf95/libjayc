@@ -371,8 +371,11 @@ int jutil_args_validateOption(jutil_args_option_t option)
     }
   }
 
-  /* For processing ctr_processed needs to be 0. */
-  option.ctr_processed = 0;
+  if(option.ctr_processed != 0)
+  {
+    ERROR("ctr_processed must be [0].");
+    return false;
+  }
 
   return true;
 }

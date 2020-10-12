@@ -218,6 +218,7 @@ jcon_socket_t *jcon_socketTCP_simple_init(const char *address, uint16_t port, jl
   {
     ERROR(NULL, "<TCP:%s:%u> gethostbyname() failed. Destroying context and session.", address, port);
     free(session);
+    free(ctx);
     return NULL;
   }
   ctx->socket_address.sin_addr = *(struct in_addr *)hostinfo->h_addr_list[0];

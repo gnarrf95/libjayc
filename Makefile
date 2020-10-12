@@ -74,7 +74,7 @@ check: $(OBJ)
 # ------------------------------------------------------------------------------
 # Build all parts of the project
 .PHONY: all
-all: libs bins
+all: lib bins
 
 # ------------------------------------------------------------------------------
 # Compile Executables
@@ -90,8 +90,8 @@ build/sbin/%: execd/%.c $(TARGET_LIBJAYC)
 
 # ------------------------------------------------------------------------------
 # Compile Library
-.PHONY: libs
-libs: $(TARGET_LIBJAYC)
+.PHONY: lib
+lib: $(TARGET_LIBJAYC)
 	@echo "All libraries done."
 
 $(TARGET_LIBJAYC): $(OBJ)
@@ -104,7 +104,11 @@ install_dev: install_lib install_inc
 	@echo "Ready for development."
 
 .PHONY: install
-install: install_lib install_inc install_bin install_sbin
+install: install_lib
+	@echo "Installation finished."
+
+.PHONY: install_all
+install_all: install_lib install_inc install_bin install_sbin
 	@echo "Installation finished."
 
 install_lib: $(TARGET_LIBJAYC) preinstall

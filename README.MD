@@ -60,15 +60,19 @@ Greetings, [@gnarrf95](https://github.com/gnarrf95).
 
 ## Getting Started
 ### Prerequesites
-_This project does not have any library requirements yet._
+There are no library requirements to compile the project.
+
+However, the documentation requires _doxygen_, _doxygen-doc_
+and _graphviz_ to create.
 
 ### Building The Library
 The check, that all the source files compile successfully, call:
-```bash
-make check
-```
+`make check` or only `make`.
 
-To compile the library, simply call `make all`.
+To compile the library, simply call `make lib`.   
+To additionally compile the included binaries, call `make bins`.
+
+To compile everything, call `make all`.
 
 ### Building The Documentation
 The documentation is build using:
@@ -90,6 +94,16 @@ If you want to specify the directory, in which the library gets installed,
 you can provide a path-prefix using the PREFIX variable:
 ```bash
 make install PREFIX=<your installation path>
+```
+
+If you want the headers also installed for development, use
+```bash
+make install_dev
+```
+
+To also install the binaries, use
+```bash
+make install_all
 ```
 
 ## Components

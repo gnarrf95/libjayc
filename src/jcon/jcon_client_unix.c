@@ -11,7 +11,6 @@
 
 #include <jayc/jcon_client_unix.h>
 #include <jayc/jcon_client_dev.h>
-#include <jayc/jcon_unix.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <errno.h>

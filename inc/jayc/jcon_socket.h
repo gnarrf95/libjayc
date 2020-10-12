@@ -134,7 +134,7 @@ jcon_socket_t *jcon_socket_accept(jcon_socket_t *session);
  * 
  * If data_ptr is @c NULL , the data is still read, but it is
  * discarded afterwards.
- * This can be used o skip offsets in binary data.
+ * This can be used to skip offsets in binary data.
  * 
  * If EOF is recieved, the session is automatically closed.
  * 

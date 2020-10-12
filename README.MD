@@ -161,6 +161,14 @@ Contains functions to generate hashes.
 
 (Encryptions also planned, but not currently available)
 
+#### jutil_cli
+A interface to handle CLI input.
+
+#### jutil_time
+Provides functionality for time management.
+
+Provides stop watch, timer, time format and sleep functions.
+
 ### jinfo
 The _jinfo_ component has functionality to get information
 about the library build.

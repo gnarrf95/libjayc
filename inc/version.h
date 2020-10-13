@@ -4,9 +4,18 @@
  * 
  * @brief Macro definitions for version information.
  * 
+ * 
  * Versions of library, but also build information,
  * like info what compilers, compiler versions
  * or platforms were used.
+ * 
+ * Library version gets passed by makefile.
+ * -D JAYC_VERSION_MAJOR=<major-version>
+ * -D JAYC_VERSION_MINOR=<minor-version>
+ * -D JAYC_VERSION_PATCH=<patch-version>
+ * -D JAYC_VERSION_ALPHA (optional)
+ * -D JAYC_VERSION_BETA (optional)
+ * -D JAYC_VERSION_STABLE (optional)
  * 
  * <b>Formats for output:</b>
  * Library:  "<major>.<minor>.<patch>"
@@ -29,25 +38,23 @@
 // JAYC Library version.
 //
 
-// #define JAYC_VERSION_ALPHA
-// #define JAYC_VERSION_BETA
-// #define JAYC_VERSION_STABLE
+#if !defined(JAYC_VERSION_MAJOR) || !defined(JAYC_VERSION_MINOR) || !defined(JAYC_VERSION_PATCH)
+  #define JAYC_VERSION_MAJOR 0
+  #define JAYC_VERSION_MINOR 0
+  #define JAYC_VERSION_PATCH 0
+#endif
 
-#define JAYC_VERSION_MAJOR  1
-#define JAYC_VERSION_MINOR  0
-#define JAYC_VERSION_PATCH  1
-
-#if defined(JAYC_VERSION_ALPHA)
-  #define JAYC_VERSION_NOTE "alpha"
+#if defined(JAYC_VERSION_STABLE)
+  #define JAYC_VERSION_NOTE "stable"
 #elif defined(JAYC_VERSION_BETA)
   #define JAYC_VERSION_NOTE "beta"
-#elif defined(JAYC_VERSION_STABLE)
-  #define JAYC_VERSION_NOTE "stable"
+#elif defined(JAYC_VERSION_ALPHA)
+  #define JAYC_VERSION_NOTE "alpha"
 #else
   #define JAYC_VERSION_NOTE "dev"
 #endif
 
-#define JAYC_VERSION_STRING     S(JAYC_VERSION_MAJOR) "." S(JAYC_VERSION_MINOR) "." S(JAYC_VERSION_PATCH) "-" JAYC_VERSION_NOTE
+#define JAYC_VERSION_STRING S(JAYC_VERSION_MAJOR) "." S(JAYC_VERSION_MINOR) "." S(JAYC_VERSION_PATCH) "-" JAYC_VERSION_NOTE
 
 #define JAYC_BUILDTIME __DATE__ " " __TIME__
 

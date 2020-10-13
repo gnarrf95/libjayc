@@ -3,7 +3,16 @@
 
 # Change compiler using "make COMPILER=<other-compiler>"
 COMPILER ?= gcc
-CC = $(COMPILER) -Wall -Werror -std=c11
+CC = $(COMPILER) -Wall -Werror -std=c99
+
+# ==============================================================================
+# Version Info
+
+LIB_VERSION_MAJOR = 1
+LIB_VERSION_MINOR = 0
+LIB_VERSION_PATCH = 1
+
+DEF_VERSION = -D JAYC_VERSION_MAJOR=$(LIB_VERSION_MAJOR) -D JAYC_VERSION_MINOR=$(LIB_VERSION_MINOR) -D JAYC_VERSION_PATCH=$(LIB_VERSION_PATCH)
 
 # ==============================================================================
 # Compiler and linker flags
@@ -24,7 +33,8 @@ LDFLAGS = $(LDF_PTHREAD) $(LDF_CRYPTO) $(LDF_REALTIME)
 # * "-D JUTIL_NO_DEBUG" if jutil modules should not log debug messages
 # * "-D JLOG_EXIT_ATCRITICAL" if program should exit at critical log
 # * "-D JLOG_EXIT_ATERROR" if program should exit at error log
-BUILD_FLAGS = -DJUTIL_NO_DEBUG
+BUILD_FLAGS ?= -DJUTIL_NO_DEBUG
+BUILD_FLAGS += $(DEF_VERSION)
 
 HEADERS_LIB = $(wildcard inc/jayc/*.h)
 HEADERS_INT = $(wildcard inc/*.h)
@@ -49,7 +59,11 @@ OBJDIRS = $(sort $(dir $(OBJ)))
 # ==============================================================================
 # Targets
 
-TARGET_LIBJAYC = build/lib/libjayc.so
+LIB_NAME = libjayc.so
+LIB_SONAME = $(LIB_NAME).$(LIB_VERSION_MAJOR)
+LIB_REALNAME = $(LIB_NAME).$(LIB_VERSION_MAJOR).$(LIB_VERSION_MINOR).$(LIB_VERSION_PATCH)
+
+TARGET_LIBJAYC = build/lib/$(LIB_NAME)
 TARGET_EXEC = $(subst exec,build/bin,$(SRC_EXEC:.c=))
 TARGET_EXECD = $(subst execd,build/sbin,$(SRC_EXECD:.c=))
 
@@ -95,7 +109,7 @@ lib: $(TARGET_LIBJAYC)
 	@echo "All libraries done."
 
 $(TARGET_LIBJAYC): $(OBJ)
-	$(CC) -shared -o $@ $(CFLAGS) $? $(LDFLAGS)
+	$(CC) -shared -Wl,-soname,$(LIB_SONAME) -o $@ $(CFLAGS) $? $(LDFLAGS)
 
 # ------------------------------------------------------------------------------
 # Library Installation
@@ -112,7 +126,7 @@ install_all: install_lib install_inc install_bin install_sbin
 	@echo "Installation finished."
 
 install_lib: $(TARGET_LIBJAYC) preinstall
-	install -m 755 $(TARGET_LIBJAYC) $(PREFIX)/lib/
+	install -m 755 -T $(TARGET_LIBJAYC) $(PREFIX)/lib/$(LIB_REALNAME)
 	ldconfig
 
 install_inc: preinstall
@@ -137,7 +151,8 @@ uninstall: uninstall_lib uninstall_inc uninstall_bin uninstall_sbin
 	@echo "Uninstallation finished."
 
 uninstall_lib:
-	rm -f $(TARGET_LIBJAYC_INSTALLED)
+	rm -f $(PREFIX)/lib/$(LIB_REALNAME)
+	ldconfig
 
 uninstall_inc:
 	rm -rf $(PREFIX)/include/jayc

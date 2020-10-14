@@ -80,6 +80,9 @@ TARGET_EXECD_INSTALLED = $(subst build/bin,$(PREFIX)/bin,$(TARGET_EXECD))
 # ==============================================================================
 # Build recipes
 
+debug: BUILD_FLAGS += -g -D JAYC_VERSION_DEBUG
+debug: all
+
 # ------------------------------------------------------------------------------
 # Compile Tests
 check: $(OBJ)

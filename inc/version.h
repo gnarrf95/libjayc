@@ -44,7 +44,9 @@
   #define JAYC_VERSION_PATCH 0
 #endif
 
-#if defined(JAYC_VERSION_STABLE)
+#if defined(JAYC_VERSION_DEBUG)
+  #define JAYC_VERSION_NOTE "debug"
+#elif defined(JAYC_VERSION_STABLE)
   #define JAYC_VERSION_NOTE "stable"
 #elif defined(JAYC_VERSION_BETA)
   #define JAYC_VERSION_NOTE "beta"

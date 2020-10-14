@@ -125,9 +125,12 @@ install: install_lib
 install_all: install_lib install_inc install_bin install_sbin
 	@echo "Installation finished."
 
-install_lib: $(TARGET_LIBJAYC) preinstall
+install_lib: $(PREFIX)/lib/$(LIB_NAME)
+
+$(PREFIX)/lib/$(LIB_NAME): $(TARGET_LIBJAYC) preinstall
 	install -m 755 -T $(TARGET_LIBJAYC) $(PREFIX)/lib/$(LIB_REALNAME)
 	ldconfig
+	cd $(PREFIX)/lib/ && ln -f -s $(LIB_SONAME) $(LIB_NAME) && cd -
 
 install_inc: preinstall
 	for header in $(HEADERS); do install -m 755 $$header $(PREFIX)/include/jayc/; done
@@ -147,11 +150,12 @@ preinstall:
 # ------------------------------------------------------------------------------
 # Library Uninstall
 .PHONY: uninstall
-uninstall: uninstall_lib uninstall_inc uninstall_bin uninstall_sbin
+uninstall: uninstall_inc uninstall_bin uninstall_sbin
 	@echo "Uninstallation finished."
 
+.PHONY: uninstall_lib
 uninstall_lib:
-	rm -f $(PREFIX)/lib/$(LIB_REALNAME)
+	rm -f $(PREFIX)/lib/$(LIB_NAME)*
 	ldconfig
 
 uninstall_inc:

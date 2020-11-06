@@ -284,6 +284,13 @@ static jaycConf_data_t g_data =
 
 int main(int argc, char *argv[])
 {
+  jlog_t *logger = jlog_stdio_session_init(JLOG_LOGTYPE_DEBUG);
+  if(logger == NULL)
+  {
+    jproc_exit(JAYCCONF_EXIT_FAILURE);
+  }
+  jlog_global_session_set(logger);
+
   jaycConf_initData();
   if(jutil_args_process
     (
@@ -297,7 +304,7 @@ int main(int argc, char *argv[])
     jproc_exit(JAYCCONF_EXIT_FAILURE);
   }
 
-  jlog_t *logger = jlog_stdio_session_init(g_data.log_level);
+  logger = jlog_stdio_session_init(g_data.log_level);
   if(logger == NULL)
   {
     jproc_exit(JAYCCONF_EXIT_FAILURE);
@@ -377,19 +384,19 @@ char *jaycConf_argFile(const char **data, size_t data_size)
 {
   if(data_size != 2)
   {
-    return jutil_args_error("[-f/--file] Invalid argument size [%lu].", data_size);
+    return jutil_args_error("Invalid argument size [%lu].", data_size);
   }
   if(data == NULL)
   {
-    return jutil_args_error("[-f/--file] Data array is NULL.");
+    return jutil_args_error("Data array is NULL.");
   }
   if(data[0] == NULL || data[1] == NULL)
   {
-    return jutil_args_error("[-f/--file] Argument string missing.");
+    return jutil_args_error("Argument string missing.");
   }
   if(strlen(data[0]) >= sizeof(g_data.filename))
   {
-    return jutil_args_error("[-f/--file] Filename too long.");
+    return jutil_args_error("Filename too long.");
   }
 
   memcpy(g_data.filename, data[0], strlen(data[0]));
@@ -404,7 +411,7 @@ char *jaycConf_argDebug(const char **data, size_t data_size)
 {
   if(data_size != 0)
   {
-    return jutil_args_error("[--debug] Should have no arguments.");
+    return jutil_args_error("Should have no arguments.");
   }
 
   g_data.log_level = JLOG_LOGTYPE_DEBUG;

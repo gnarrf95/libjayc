@@ -10,9 +10,9 @@ CC = $(COMPILER) -Wall -Werror -std=c99
 
 LIB_VERSION_MAJOR = 1
 LIB_VERSION_MINOR = 0
-LIB_VERSION_PATCH = 1
+LIB_VERSION_PATCH = 2
 
-DEF_VERSION = -D JAYC_VERSION_MAJOR=$(LIB_VERSION_MAJOR) -D JAYC_VERSION_MINOR=$(LIB_VERSION_MINOR) -D JAYC_VERSION_PATCH=$(LIB_VERSION_PATCH)
+VERSION_FLAGS = -D JAYC_VERSION_MAJOR=$(LIB_VERSION_MAJOR) -D JAYC_VERSION_MINOR=$(LIB_VERSION_MINOR) -D JAYC_VERSION_PATCH=$(LIB_VERSION_PATCH)
 
 # ==============================================================================
 # Compiler and linker flags
@@ -34,7 +34,7 @@ LDFLAGS = $(LDF_PTHREAD) $(LDF_CRYPTO) $(LDF_REALTIME)
 # * "-D JLOG_EXIT_ATCRITICAL" if program should exit at critical log
 # * "-D JLOG_EXIT_ATERROR" if program should exit at error log
 BUILD_FLAGS ?= -DJUTIL_NO_DEBUG
-BUILD_FLAGS += $(DEF_VERSION)
+DEBUG_FLAGS =
 
 HEADERS_LIB = $(wildcard inc/jayc/*.h)
 HEADERS_INT = $(wildcard inc/*.h)
@@ -80,7 +80,8 @@ TARGET_EXECD_INSTALLED = $(subst build/bin,$(PREFIX)/bin,$(TARGET_EXECD))
 # ==============================================================================
 # Build recipes
 
-debug: BUILD_FLAGS += -g -D JAYC_VERSION_DEBUG
+.PHONY: debug
+debug: DEBUG_FLAGS += -g -D JAYC_VERSION_DEBUG
 debug: all
 
 # ------------------------------------------------------------------------------
@@ -186,7 +187,7 @@ doc_doxygen: Doxyfile
 # General Recipes
 
 build/objects/%.o: src/%.c build
-	$(CC) -c $< -o $@ $(CFLAGS) $(BUILD_FLAGS) -fpic
+	$(CC) -c $< -o $@ $(CFLAGS) $(BUILD_FLAGS) $(VERSION_FLAGS) $(DEBUG_FLAGS) -fpic
 
 build:
 	mkdir -p build/objects

@@ -10,6 +10,7 @@
  */
 
 #include <jayc/jutil_args.h>
+#include <jayc/jutil_linkedlist.h>
 #include <jayc/jproc.h>
 #include <jayc/jlog.h>
 #include <jayc/jinfo.h>
@@ -20,36 +21,49 @@
 #include <stdarg.h>
 
 //==============================================================================
-// Define context structure and log macros.
+// Define structures.
 //
 
+/**
+ * @brief Created at parsing, afterwards executes options.
+ */
+typedef struct __jutil_args_processed_option
+{
+  const char *name;                           /**< Name of the option. */
+  char *tag_string;                           /**< Holds tags. Used for error messages.
+                                                   "-f/--file"
+                                                   "-f"
+                                                   "--file" */
+                                                   
+  jutil_args_optionHandler_t handler;         /**< Handler of option. */
+
+  char *args[JUTIL_ARGS_OPTIONPARAM_MAXSIZE]; /**< Arguments from CLI. */
+  size_t arg_size;                            /**< Number of arguments. */
+} processedOption_t;
+
+/**
+ * @brief Context for parsing process.
+ */
 typedef struct __jutil_args_context
 {
-  jutil_args_progDesc_t *prog_desc;
+  jutil_args_progDesc_t *prog_desc;           /**< Program description for help message. */
 
-  int argc;
-  char **argv;
-  int counter;
+  int argc;                                   /**< Number of input strings. */
+  char **argv;                                /**< Input strings. */
+  int counter;                                /**< Counter pointing to currently
+                                                   processed input string. */
 
-  jutil_args_option_t *options;
-  size_t opt_number;
-} jutil_args_ctx_t;
+  jutil_args_option_t *options;               /**< Array with options. */
+  size_t opt_number;                          /**< Size of option array. */
 
-#ifdef JUTIL_NO_DEBUG /* Allow to disable debug messages at compile time. */
-  #define DEBUG(fmt, ...)
-#else
-  #define DEBUG(fmt, ...) JLOG_DEBUG(fmt, ##__VA_ARGS__)
-#endif
-#define INFO(fmt, ...) JLOG_INFO(fmt, ##__VA_ARGS__)
-#define WARN(fmt, ...) JLOG_WARN(fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) JLOG_ERROR(fmt, ##__VA_ARGS__)
-#define CRITICAL(fmt, ...)JLOG_CRITICAL(fmt, ##__VA_ARGS__)
-#define FATAL(fmt, ...) JLOG_FATAL(fmt, ##__VA_ARGS__)
+  jutil_linkedlist_t *processed_list;         /**< Linked list with processed
+                                                   options to execute. */
+} processContext_t;
 
 
 
 //==============================================================================
-// Declare internal funcions.
+// Declare internal functions.
 //
 
 /**
@@ -59,7 +73,7 @@ typedef struct __jutil_args_context
  * 
  * @return        Number of parameters in array.
  */
-static size_t jutil_args_optionParam_getSize(const jutil_args_optionParam_t *params);
+static size_t optionParam_getSize(const jutil_args_optionParam_t *params);
 
 /**
  * @brief Checks for correctness of option.
@@ -69,7 +83,17 @@ static size_t jutil_args_optionParam_getSize(const jutil_args_optionParam_t *par
  * @return        @c true , if option is correct.
  * @return        @c false , if option is invalid.
  */
-static int jutil_args_validateOption(jutil_args_option_t option);
+static int validateOption(jutil_args_option_t *option);
+
+/**
+ * @brief Iterates through input and parses it.
+ * 
+ * @param ctx   Process context.
+ * 
+ * @return      @c true , if parsing was successful.
+ * @return      @c false , if error occured.
+ */
+static int parseInput(processContext_t *ctx);
 
 /**
  * @brief Processes short tags.
@@ -78,12 +102,14 @@ static int jutil_args_validateOption(jutil_args_option_t option);
  * finds the appropriate option definition
  * and handles data parsing.
  * 
+ * Also handles stacked tags (f.ex. "-fdx").
+ * 
  * @param ctx Parser context.
  * 
  * @return    @c true , if successful.
  * @return    @c false , if error occured.
  */
-static int jutil_args_processShortTag(jutil_args_ctx_t *ctx);
+static int processShortTag(processContext_t *ctx);
 
 /**
  * @brief Processes long tags.
@@ -97,7 +123,35 @@ static int jutil_args_processShortTag(jutil_args_ctx_t *ctx);
  * @return    @c true , if successful.
  * @return    @c false , if error occured.
  */
-static int jutil_args_processLongTag(jutil_args_ctx_t *ctx);
+static int processLongTag(processContext_t *ctx);
+
+/**
+ * @brief Processes option with current counter.
+ * 
+ * Processes input at current counter with option.
+ * Creates processedOption struct and adds it to list.
+ * 
+ * @param ctx     Processing context.
+ * @param option  Option for current input counter.
+ * 
+ * @return        @c true , if option processed successfully.
+ * @return        @c false , if error occured.
+ */
+static int processOption(processContext_t *ctx, jutil_args_option_t *option);
+
+/**
+ * @brief Free struct of processed option.
+ * 
+ * @param option  Processed option struct.
+ */
+static void freeProcessedOption(processedOption_t *proc_option);
+
+/**
+ * @brief Frees all processed options from linked list.
+ * 
+ * @param ctx Process context.
+ */
+static void clearProcessedOptions(processContext_t *ctx);
 
 /**
  * @brief Gets option for tag from array.
@@ -111,7 +165,7 @@ static int jutil_args_processLongTag(jutil_args_ctx_t *ctx);
  * @return    Option pointer matching tag.
  * @return    @c NULL , if no matching option was found.
  */
-static jutil_args_option_t *jutil_args_getShortOption(jutil_args_ctx_t *ctx, char tag);
+static jutil_args_option_t *getShortOption(processContext_t *ctx, char tag);
 
 /**
  * @brief Gets option for tag from array.
@@ -125,7 +179,19 @@ static jutil_args_option_t *jutil_args_getShortOption(jutil_args_ctx_t *ctx, cha
  * @return    Option pointer matching tag.
  * @return    @c NULL , if no matching option was found.
  */
-static jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char *tag);
+static jutil_args_option_t *getLongOption(processContext_t *ctx, char *tag);
+
+/**
+ * @brief Executes handlers with data.
+ * 
+ * Uses linked list created by process functions.
+ * 
+ * @param ctx Parser context.
+ * 
+ * @return    @c true , if successful.
+ * @return    @c false , if error occured.
+ */
+static int executeOptions(processContext_t *ctx);
 
 /**
  * @brief Prints information about how to use arguments.
@@ -133,7 +199,7 @@ static jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char
  * @param ctx     Parser context.
  * @param output  (stdout/stderr).
  */
-static void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output);
+static void printUsage(processContext_t *ctx, FILE *output);
 
 /**
  * @brief Prints usage error.
@@ -144,21 +210,53 @@ static void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output);
  * @param ctx Parser context.
  * @param fmt Format string for stdarg.h .
  */
-static void jutil_args_printError(jutil_args_ctx_t *ctx, const char *fmt, ...);
+static void printError(processContext_t *ctx, const char *fmt, ...);
 
 /**
  * @brief Prints usage info with additional description.
  * 
  * @param ctx Parser context.
  */
-static void jutil_args_printHelp(jutil_args_ctx_t *ctx);
+static void printHelp(processContext_t *ctx);
 
 /**
  * @brief prints info about library and program versions.
  * 
  * @param ctx Parser context.
  */
-static void jutil_args_printVersionInfo(jutil_args_ctx_t *ctx);
+static void printVersionInfo(processContext_t *ctx);
+
+/**
+ * @brief Allocate memory and create a string with option tags.
+ * 
+ * String showing which tags a option has.
+ * "-f/--file"
+ * "-f"
+ * "--file"
+ * 
+ * @param option  Option from which to create tag string.
+ * 
+ * @return        Allocated string.
+ * @return        @c NULL , if error occured.
+ */
+static char *createTagString(jutil_args_option_t *option);
+
+
+
+//==============================================================================
+// Define log macros.
+//
+
+#ifdef JUTIL_NO_DEBUG /* Allow to disable debug messages at compile time. */
+  #define DEBUG(fmt, ...)
+#else
+  #define DEBUG(fmt, ...) JLOG_DEBUG(fmt, ##__VA_ARGS__)
+#endif
+#define INFO(fmt, ...) JLOG_INFO(fmt, ##__VA_ARGS__)
+#define WARN(fmt, ...) JLOG_WARN(fmt, ##__VA_ARGS__)
+#define ERROR(fmt, ...) JLOG_ERROR(fmt, ##__VA_ARGS__)
+#define CRITICAL(fmt, ...)JLOG_CRITICAL(fmt, ##__VA_ARGS__)
+#define FATAL(fmt, ...) JLOG_FATAL(fmt, ##__VA_ARGS__)
 
 
 
@@ -197,91 +295,79 @@ int jutil_args_process(jutil_args_progDesc_t *prog_desc, int argc, char *argv[],
     return true;
   }
 
-  DEBUG("Processing [%lu] options.", opt_number);
+  int check;
 
+  /* Validate options. */
+  check = true;
   size_t ctr;
-
-  /* Check if all options are valid. */
   for(ctr = 0; ctr < opt_number; ctr++)
   {
-    if(jutil_args_validateOption(options[ctr]) == false)
+    if(validateOption(&options[ctr]) == false)
     {
-      DEBUG("Invalid option [ctr = %d].", ctr);
-      return false;
+      DEBUG("Option [%lu] invalid.", ctr);
+      check = false;
     }
   }
 
-  /* Context to pass to sub-functions. */
-  jutil_args_ctx_t context =
+  if(check == false)
+  {
+    return false;
+  }
+
+  /* Create context. */
+  DEBUG("Processing [%lu] options.", opt_number);
+  processContext_t ctx =
   {
     prog_desc,
     argc,
     argv,
     0,
     options,
-    opt_number
+    opt_number,
+    NULL
   };
-  /* Check if CLI arguments available. */
-  if(argc == 1)
+
+  /* Parse input. */
+  if(ctx.argc == 1)
   {
-    DEBUG("No CLI arguments available.");
+    DEBUG("No CLI input available.");
   }
   else
   {
-    /* Iterate through all options and process them. */
-    for(context.counter = 1; context.counter < context.argc; context.counter++)
+    if(parseInput(&ctx) == false)
     {
-      char *arg = context.argv[context.counter];
-
-      if(arg[0] == '-')
-      {
-        if(arg[1] == '-')
-        {
-          /* Process long tag options. */
-          if(jutil_args_processLongTag(&context) == false)
-          {
-            DEBUG("Failed processing long tag [ctr = %d].", context.counter);
-            return false;
-          }
-        }
-        else
-        {
-        /* Process long tag options. */
-          if(jutil_args_processShortTag(&context) == false)
-          {
-            DEBUG("Failed processing short tag [ctr = %d].", context.counter);
-            return false;
-          }
-        }
-      }
-      else
-      {
-        /* Options without tags not implemented yet. */
-        jutil_args_printError(&context, "Invalid tag [%s].", arg);
-        return false;
-      }
+      DEBUG("Input parsing failed.");
+      return false;
     }
   }
 
   /* Check if mandatory options were processed. */
-  bool ret = true;
+  check = true;
   for(ctr = 0; ctr < opt_number; ctr++)
   {
     if(options[ctr].mandatory == true && options[ctr].ctr_processed == 0)
     {
       if(options[ctr].tag_long == NULL)
       {
-        jutil_args_printError(&context, "Missing tag [-%c].", options[ctr].tag_short);
+        printError(&ctx, "Missing tag [-%c].", options[ctr].tag_short);
       }
       else
       {
-        jutil_args_printError(&context, "Missing tag [--%s].", options[ctr].tag_long);
+        printError(&ctx, "Missing tag [--%s].", options[ctr].tag_long);
       }
-      ret = false;
+      check = false;
     }
   }
+  
+  if(check == false)
+  {
+    DEBUG("Missing mandatory options.");
+    clearProcessedOptions(&ctx);
+    return false;
+  }
 
-  return ret;
+  /* Execute options handlers. */
+  return executeOptions(&ctx);
 }
 
 
@@ -292,7 +378,7 @@ int jutil_args_process(jutil_args_progDesc_t *prog_desc, int argc, char *argv[],
 
 //------------------------------------------------------------------------------
 //
-size_t jutil_args_optionParam_getSize(const jutil_args_optionParam_t *params)
+size_t optionParam_getSize(const jutil_args_optionParam_t *params)
 {
   if(params == NULL)
   {
@@ -320,42 +406,42 @@ size_t jutil_args_optionParam_getSize(const jutil_args_optionParam_t *params)
 
 //------------------------------------------------------------------------------
 //
-int jutil_args_validateOption(jutil_args_option_t option)
+int validateOption(jutil_args_option_t *option)
 {
-  if(option.name == NULL)
+  if(option->name == NULL)
   {
     ERROR("Option needs a name.");
     return false;
   }
 
-  if(option.tag_long == NULL && option.tag_short == 0)
+  if(option->tag_long == NULL && option->tag_short == 0)
   {
     ERROR("Options without tags not implemented yet.");
     return false;
   }
 
-  if(option.handler == NULL)
+  if(option->handler == NULL)
   {
     ERROR("Option needs a handler.");
     return false;
   }
 
-  if(option.tag_short == 'h' || option.tag_short == 'v')
+  if(option->tag_short == 'h' || option->tag_short == 'v')
   {
-    ERROR("Tag [-%c] already used by jutil_args.", option.tag_short);
+    ERROR("Tag [-%c] already used by jutil_args.", option->tag_short);
     return false;
   }
 
-  if(option.tag_long)
+  if(option->tag_long)
   {
-    if(strcmp(option.tag_long, "help") == 0 || strcmp(option.tag_long, "version") == 0)
+    if(strcmp(option->tag_long, "help") == 0 || strcmp(option->tag_long, "version") == 0)
     {
-      ERROR("Tag [--%s] already used by jutil_args.", option.tag_long);
+      ERROR("Tag [--%s] already used by jutil_args.", option->tag_long);
       return false;
     }
   }
 
-  size_t size_param = jutil_args_optionParam_getSize(option.params);
+  size_t size_param = optionParam_getSize(option->params);
   size_t ctr_param;
   for
   (
@@ -364,16 +450,61 @@ int jutil_args_validateOption(jutil_args_option_t option)
     ctr_param++
   )
   {
-    if(option.params[ctr_param].name == NULL)
+    if(option->params[ctr_param].name == NULL)
     {
       ERROR("Option parameter needs a name.");
       return false;
     }
   }
 
-  if(option.ctr_processed != 0)
+  option->ctr_processed = 0;
+
+  return true;
+}
+
+//------------------------------------------------------------------------------
+//
+int parseInput(processContext_t *ctx)
+{
+  int check = true;
+
+  for(ctx->counter = 1; ctx->counter < ctx->argc; ctx->counter++)
   {
-    ERROR("ctr_processed must be [0].");
+    char *arg_string = ctx->argv[ctx->counter];
+
+    if(arg_string[0] != '-')
+    {
+      /* Options without tags not implemented yet. */
+      printError(ctx, "Invalid tag [%s].", arg_string);
+      check = false;
+      break;
+    }
+
+    if(arg_string[1] == '-')
+    {
+      /* Process long tag options. */
+      if(processLongTag(ctx) == false)
+      {
+        DEBUG("Failed processing long tag [ctr = %lu].", ctx->counter);
+        check = false;
+        break;
+      }
+    }
+    else
+    {
+      /* Process short tag options. */
+      if(processShortTag(ctx) == false)
+      {
+        DEBUG("Failed processing short tag [ctr = %lu].", ctx->counter);
+        check = false;
+        break;
+      }
+    }
+  }
+
+  if(check == false)
+  {
+    clearProcessedOptions(ctx);
     return false;
   }
 
@@ -382,159 +513,178 @@ int jutil_args_validateOption(jutil_args_option_t option)
 
 //------------------------------------------------------------------------------
 //
-int jutil_args_processShortTag(jutil_args_ctx_t *ctx)
+int processShortTag(processContext_t *ctx)
 {
-  /* Check validity of tag. */
-  if(strlen(ctx->argv[ctx->counter]) > 2)
+  char *tag_string = ctx->argv[ctx->counter];
+  size_t tag_number = strlen(tag_string) - 1;
+
+  size_t ctr;
+
+  /* Iterate through tag characters (allows for stacked tags). */
+  for(ctr = 1; ctr < tag_number+1; ctr++)
   {
-    jutil_args_printError(ctx, "Invalid tag [%s].", ctx->argv[ctx->counter]);
-    return false;
-  }
-
-  char tag = ctx->argv[ctx->counter][1];
-
-  /* Check if help-tag recieved. */
-  if(tag == 'h')
-  {
-    jutil_args_printHelp(ctx);
-    return false;
-  }
-
-  /* Check if version-tag recieved. */
-  if(tag == 'v')
-  {
-    jutil_args_printVersionInfo(ctx);
-    return false;
-  }
-
-  jutil_args_option_t *option = jutil_args_getShortOption(ctx, tag);
-  if(option == NULL)
-  {
-    jutil_args_printError(ctx, "Invalid tag [-%c].", tag);
-    return false;
-  }
-
-  char **data = NULL;
-  size_t data_size = jutil_args_optionParam_getSize(option->params);
-
-  /* Read additional arguments for option. */
-  if(data_size)
-  {
-    data = (char **)malloc(sizeof(char *) * data_size);
-    if(data == NULL)
+    if(tag_string[ctr] == 'h')
     {
-      ERROR("malloc failed() [tag = -%c].", tag);
+      printHelp(ctx);
+      return false;
+    }
+    if(tag_string[ctr] == 'v')
+    {
+      printVersionInfo(ctx);
       return false;
     }
 
-    size_t ctr_data;
-    for(ctr_data = 0; ctr_data < data_size; ctr_data++)
+    jutil_args_option_t *option = getShortOption(ctx, tag_string[ctr]);
+    if(option == NULL)
     {
-      ctx->counter++;
-      if(ctx->counter >= ctx->argc)
-      {
-        jutil_args_printError(ctx, "Missing arguments for tag [-%c].", tag);
-        free(data);
-        return false;
-      }
+      printError(ctx, "Invalid tag [-%c].", tag_string[ctr]);
+      return false;
+    }
 
-      data[ctr_data] = ctx->argv[ctx->counter];
+    if(tag_number > 1 && optionParam_getSize(option->params))
+    {
+      printError(ctx, "Tags requiring arguments cannot be stacked (-%c).", tag_string[ctr]);
+      return false;
+    }
+
+    if(processOption(ctx, option) == false)
+    {
+      return false;
     }
   }
 
-  /* Call option handler. */
-  char *ret_handler = option->handler((const char **)data, data_size);
-  free(data);
-  if(ret_handler)
-  {
-    jutil_args_printError(ctx, (const char *)ret_handler);
-    free(ret_handler);
-    return false;
-  }
-
-  option->ctr_processed++;
   return true;
 }
 
 //------------------------------------------------------------------------------
 //
-int jutil_args_processLongTag(jutil_args_ctx_t *ctx)
+int processLongTag(processContext_t *ctx)
 {
   size_t tag_size = strlen(ctx->argv[ctx->counter]) - 2;
-  if(tag_size > 128)
+  
+  char *tag = (char *)malloc(sizeof(char) * tag_size+1);
+  if(tag == NULL)
   {
-    jutil_args_printError(ctx, "Invalid tag [%s].", ctx->argv[ctx->counter]);
+    ERROR("malloc() failed.");
     return false;
   }
 
-  char tag[128] = { 0 };
+  memset(tag, 0, tag_size+1);
   memcpy(tag, &(ctx->argv[ctx->counter][2]), tag_size);
 
   /* Check if help-tag recieved. */
   if(strcmp(tag, "help") == 0)
   {
-    jutil_args_printHelp(ctx);
+    printHelp(ctx);
+    free(tag);
     return false;
   }
 
   /* Check if version-tag recieved. */
   if(strcmp(tag, "version") == 0)
   {
-    jutil_args_printVersionInfo(ctx);
+    printVersionInfo(ctx);
+    free(tag);
     return false;
   }
 
-  jutil_args_option_t *option = jutil_args_getLongOption(ctx, tag);
+  /* Get option and process it. */
+  jutil_args_option_t *option = getLongOption(ctx, tag);
   if(option == NULL)
   {
-    jutil_args_printError(ctx, "Invalid tag [--%s].", tag);
+    printError(ctx, "Invalid tag [--%s].", tag);
+    free(tag);
+    return false;
+  }
+  free(tag);
+
+  return processOption(ctx, option);
+}
+
+//------------------------------------------------------------------------------
+//
+int processOption(processContext_t *ctx, jutil_args_option_t *option)
+{
+  /* Create pointer for processed option. */
+  processedOption_t *processed_option = (processedOption_t *)malloc(sizeof(processedOption_t));
+  if(processed_option == NULL)
+  {
+    ERROR("malloc() failed [%s].", option->name);
     return false;
   }
 
-  char **data = NULL;
-  size_t data_size = jutil_args_optionParam_getSize(option->params);
+  /* Copy data. */
+  processed_option->name = option->name;
+  processed_option->handler = option->handler;
 
-  /* Read additional arguments for option. */
-  if(data_size)
+  /* Read arguments if necessary. */
+  processed_option->arg_size = optionParam_getSize(option->params);
+
+  int check = true;
+  size_t ctr;
+  for(ctr = 0; ctr < processed_option->arg_size; ctr++)
   {
-    data = (char **)malloc(sizeof(char *) * data_size);
-    if(data == NULL)
+    ctx->counter++;
+    if(ctx->counter >= ctx->argc)
     {
-      ERROR("malloc failed() [tag = --%s].", tag);
-      return false;
+      printError(ctx, "[%s] Missing arguments.", processed_option->tag_string);
+      check = false;
     }
 
-    size_t ctr_data;
-    for(ctr_data = 0; ctr_data < data_size; ctr_data++)
-    {
-      ctx->counter++;
-      if(ctx->counter >= ctx->argc)
-      {
-        jutil_args_printError(ctx, "Missing arguments for tag [--%s].", tag);
-        return false;
-      }
-
-      data[ctr_data] = ctx->argv[ctx->counter];
-    }
+    processed_option->args[ctr] = ctx->argv[ctx->counter];
   }
 
-  /* Call option handler. */
-  char *ret_handler = option->handler((const char **)data, data_size);
-  free(data);
-  if(ret_handler)
+  if(check == false)
   {
-    jutil_args_printError(ctx, (const char *)ret_handler);
-    free(ret_handler);
+    free(processed_option);
     return false;
   }
 
-  option->ctr_processed++;
+  /* Create tag_string. */
+  processed_option->tag_string = createTagString(option);
+  if(processed_option->tag_string == NULL)
+  {
+    free(processed_option);
+    return false;
+  }
+
+  if(jutil_linkedlist_append(&ctx->processed_list, (void *)processed_option) == false)
+  {
+    ERROR("jutil_linkedlist_push() failed.");
+    freeProcessedOption(processed_option);
+    return false;
+  }
+
   return true;
 }
 
 //------------------------------------------------------------------------------
 //
-jutil_args_option_t *jutil_args_getShortOption(jutil_args_ctx_t *ctx, char tag)
+void freeProcessedOption(processedOption_t *proc_option)
+{
+  free(proc_option->tag_string);
+  free(proc_option);
+}
+
+//------------------------------------------------------------------------------
+//
+void clearProcessedOptions(processContext_t *ctx)
+{
+  jutil_linkedlist_t *proc_opts = ctx->processed_list;
+
+  while(proc_opts != NULL)
+  {
+    processedOption_t *opt = (processedOption_t *)jutil_linkedlist_pop(&proc_opts);
+    if(opt)
+    {
+      freeProcessedOption(opt);
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+//
+jutil_args_option_t *getShortOption(processContext_t *ctx, char tag)
 {
   size_t ctr;
   for(ctr = 0; ctr < ctx->opt_number; ctr++)
@@ -550,7 +700,7 @@ jutil_args_option_t *jutil_args_getShortOption(jutil_args_ctx_t *ctx, char tag)
 
 //------------------------------------------------------------------------------
 //
-jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char *tag)
+jutil_args_option_t *getLongOption(processContext_t *ctx, char *tag)
 {
   size_t ctr;
   for(ctr = 0; ctr < ctx->opt_number; ctr++)
@@ -571,30 +721,63 @@ jutil_args_option_t *jutil_args_getLongOption(jutil_args_ctx_t *ctx, char *tag)
 
 //------------------------------------------------------------------------------
 //
-void jutil_args_printHelp(jutil_args_ctx_t *ctx)
+int executeOptions(processContext_t *ctx)
 {
-  printf("## [Program] ##\n");
-  printf("%s (%s)\n\n", ctx->prog_desc->prog_name, ctx->prog_desc->version_string);
+  int fail = false;
 
-  printf("## [Description] ##\n");
-  printf("%s\n\n", ctx->prog_desc->description);
+  jutil_linkedlist_t *opt_itr = ctx->processed_list;
 
-  jutil_args_printUsage(ctx, stdout);
+  while(opt_itr != NULL)
+  {
+    processedOption_t *opt = (processedOption_t *)jutil_linkedlist_getData(opt_itr);
+
+    char *ret_handler = opt->handler((const char **)opt->args, opt->arg_size);
+    if(ret_handler)
+    {
+      printError(ctx, "[%s] %s", opt->tag_string, ret_handler);
+      free(ret_handler);
+      fail = true;
+      break;
+    }
+
+    opt_itr = jutil_linkedlist_iterate(opt_itr);
+  }
+
+  clearProcessedOptions(ctx);
+  if(fail)
+  {
+    return false;
+  }
+
+  return true;
+}
+
+//------------------------------------------------------------------------------
+//
+void printHelp(processContext_t *ctx)
+{
+  printf("## [PROGRAM] ##\n");
+  printf("  %s (%s)\n\n", ctx->prog_desc->prog_name, ctx->prog_desc->version_string);
+
+  printf("## [DESCRIPTION] ##\n");
+  printf("  %s\n\n", ctx->prog_desc->description);
+
+  printUsage(ctx, stdout);
   printf("\n");
 
-  printf("## [Options] ##\n\n");
+  printf("## [OPTIONS] ##\n\n");
   size_t ctr_op;
   for(ctr_op = 0; ctr_op < ctx->opt_number; ctr_op++)
   {
     jutil_args_option_t op = ctx->options[ctr_op];
-    size_t size_par = jutil_args_optionParam_getSize(op.params);
+    size_t size_par = optionParam_getSize(op.params);
     size_t ctr_par;
 
     /* Option description. */
     printf("# %s", op.name);
     if(!op.mandatory)
     {
-      printf(" (optional)");
+      printf(" (OPTIONAL)");
     }
     printf(" :\n");
 
@@ -607,15 +790,15 @@ void jutil_args_printHelp(jutil_args_ctx_t *ctx)
     }
     else if(op.tag_long == NULL)
     {
-      printf("  Usage: -%c", op.tag_short);
+      printf("  USAGE: -%c", op.tag_short);
     }
     else if(op.tag_short == 0)
     {
-      printf("  Usage: --%s", op.tag_long);
+      printf("  USAGE: --%s", op.tag_long);
     }
     else
     {
-      printf("  Usage: --%s/-%c", op.tag_long, op.tag_short);
+      printf("  USAGE: --%s/-%c", op.tag_long, op.tag_short);
     }
 
     for(ctr_par = 0; ctr_par < size_par; ctr_par++)
@@ -627,26 +810,26 @@ void jutil_args_printHelp(jutil_args_ctx_t *ctx)
     /* Parameter description. */
     if(size_par)
     {
-      printf("  Parameters:\n");
+      printf("  PARAMETERS:\n");
       for(ctr_par = 0; ctr_par < size_par; ctr_par++)
       {
-        printf("  - %s : %s\n", op.params[ctr_par].name, op.params[ctr_par].description);
+        printf("  * %s : %s\n", op.params[ctr_par].name, op.params[ctr_par].description);
       }
       printf("\n");
     }
   }
 
-  printf("## [Copyright Notest] ##\n");
-  printf("Developer: %s\n", ctx->prog_desc->developer_info);
-  printf("%s\n\n", ctx->prog_desc->copyright_info);
+  printf("## [COPYRIGHT] ##\n");
+  printf("  DEVELOPER: %s\n", ctx->prog_desc->developer_info);
+  printf("  %s\n\n", ctx->prog_desc->copyright_info);
 }
 
 //------------------------------------------------------------------------------
 //
-void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)
+void printUsage(processContext_t *ctx, FILE *output)
 {
   /* Program called. */
-  fprintf(output, "Usage: %s ", ctx->argv[0]);
+  fprintf(output, "  USAGE: %s ", ctx->argv[0]);
 
   size_t ctr;
 
@@ -674,7 +857,7 @@ void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)
       fprintf(output, "-%c", op.tag_short);
     }
 
-    if(jutil_args_optionParam_getSize(op.params))
+    if(optionParam_getSize(op.params))
     {
       fprintf(output, " ...");
     }
@@ -691,7 +874,7 @@ void jutil_args_printUsage(jutil_args_ctx_t *ctx, FILE *output)
 
 //------------------------------------------------------------------------------
 //
-void jutil_args_printError(jutil_args_ctx_t *ctx, const char *fmt, ...)
+void printError(processContext_t *ctx, const char *fmt, ...)
 {
   va_list args;
   char buf[2048];
@@ -701,19 +884,66 @@ void jutil_args_printError(jutil_args_ctx_t *ctx, const char *fmt, ...)
   va_end(args);
 
   fprintf(stderr, "[ ERROR ] %s\n", buf);
-  jutil_args_printUsage(ctx, stderr);
-  fprintf(stderr, "\nUse [-h / --help], to get more info.\n");
+  printUsage(ctx, stderr);
+  fprintf(stderr, "\n  Use [-h / --help], to get more info.\n");
 
 }
 
 //------------------------------------------------------------------------------
 //
-void jutil_args_printVersionInfo(jutil_args_ctx_t *ctx)
+void printVersionInfo(processContext_t *ctx)
 {
-  printf("## [Program Version] ##\n");
-  printf("%s %s\n\n", ctx->prog_desc->prog_name, ctx->prog_desc->version_string);
+  printf("## [PROGRAM VERSION] ##\n");
+  printf("  %s %s\n\n", ctx->prog_desc->prog_name, ctx->prog_desc->version_string);
 
-  printf("## [Library Version] ##\n");
-  printf("%s\n", jinfo_build_version());
-  printf("Build with %s on %s\n\n", jinfo_build_compiler(), jinfo_build_platform());
+  printf("## [LIBRARY VERSION] ##\n");
+  printf("  %s\n", jinfo_build_version());
+  printf("  BUILT WITH %s ON %s\n\n", jinfo_build_compiler(), jinfo_build_platform());
+}
+
+//------------------------------------------------------------------------------
+//
+char *createTagString(jutil_args_option_t *option)
+{
+  size_t str_len;
+
+  if(option->tag_long && option->tag_short)
+  {
+    str_len = strlen(option->tag_long) + 5;
+  }
+  else if(option->tag_long)
+  {
+    str_len = strlen(option->tag_long) + 2;
+  }
+  else if(option->tag_short)
+  {
+    str_len = 2;
+  }
+  else
+  {
+    ERROR("Option without tag not supported.");
+    return NULL;
+  }
+
+  char *tag_str = (char *)malloc(sizeof(char) * (str_len + 1));
+  if(tag_str == NULL)
+  {
+    ERROR("malloc() failed.");
+    return NULL;
+  }
+
+  if(option->tag_long && option->tag_short)
+  {
+    sprintf(tag_str, "-%c/--%s", option->tag_short, option->tag_long);
+  }
+  else if(option->tag_long)
+  {
+    sprintf(tag_str, "--%s", option->tag_long);
+  }
+  else
+  {
+    sprintf(tag_str, "-%c", option->tag_short);
+  }
+
+  return tag_str;
 }
